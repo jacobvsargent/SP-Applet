@@ -8,6 +8,10 @@ export default function ResultsTable({ results }) {
    */
   const formatValue = (value) => {
     if (typeof value === 'object' && value.min !== undefined && value.max !== undefined) {
+      // Check if min and max are the same (when skipScenario5Min is checked)
+      if (value.min === value.max) {
+        return formatCurrency(value.max);
+      }
       // Always put smaller number first
       const smaller = Math.min(value.min, value.max);
       const larger = Math.max(value.min, value.max);

@@ -424,6 +424,18 @@ export async function runScenario5(userInputs, onProgress) {
   // Get outputs for MAX
   const maxOutputs = await getOutputs();
   
+  // Check if we should skip the minimum calculation
+  if (userInputs.skipScenario5Min) {
+    onProgress(93, 'Saving Solar + Donation (With Refund) workbook...');
+    await createWorkbookCopy('5 - Solar + Donation (With Refund)', userInputs);
+    
+    // Return only max values (use same values for min to avoid display issues)
+    return {
+      max: maxOutputs,
+      min: maxOutputs
+    };
+  }
+  
   onProgress(87, 'Running Solar + Donation (With Refund) - Minimum...');
   
   // Zero out G47

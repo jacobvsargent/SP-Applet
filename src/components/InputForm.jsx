@@ -7,7 +7,8 @@ export default function InputForm({ onSubmit }) {
     income: '',
     avgIncome: '',
     state: '',
-    filingStatus: ''
+    filingStatus: '',
+    skipScenario5Min: false
   });
 
   const [errors, setErrors] = useState({});
@@ -43,10 +44,10 @@ export default function InputForm({ onSubmit }) {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
 
     // Validate on change if field has been touched
@@ -102,14 +103,17 @@ export default function InputForm({ onSubmit }) {
         income: parseCurrency(formData.income),
         avgIncome: parseCurrency(formData.avgIncome),
         state: formData.state,
-        filingStatus: formData.filingStatus
+        filingStatus: formData.filingStatus,
+        skipScenario5Min: formData.skipScenario5Min
       };
       onSubmit(submissionData);
     }
   };
 
   const isFormValid = () => {
-    return Object.keys(formData).every(key => {
+    // Check only the required fields (not the checkbox)
+    const requiredFields = ['income', 'avgIncome', 'state', 'filingStatus'];
+    return requiredFields.every(key => {
       const value = formData[key];
       return value && value !== '' && !validateField(key, value);
     });
@@ -196,6 +200,22 @@ export default function InputForm({ onSubmit }) {
         )}
       </div>
 
+      <div className="form-group" style={{ marginTop: '20px' }}>
+        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'normal' }}>
+          <input
+            type="checkbox"
+            name="skipScenario5Min"
+            checked={formData.skipScenario5Min}
+            onChange={handleChange}
+            style={{ marginRight: '8px', width: 'auto', cursor: 'pointer' }}
+          />
+          <span>Skip 30% donation calculation in Scenario 5 (faster results)</span>
+        </label>
+        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', marginLeft: '24px' }}>
+          When checked, Scenario 5 will only show the maximum (60% donation) result instead of a range.
+        </div>
+      </div>
+
       <button 
         type="submit" 
         className="btn-primary"
@@ -216,7 +236,8 @@ export default function InputForm({ onSubmit }) {
               income: parseCurrency(formData.income),
               avgIncome: parseCurrency(formData.avgIncome),
               state: formData.state,
-              filingStatus: formData.filingStatus
+              filingStatus: formData.filingStatus,
+              skipScenario5Min: formData.skipScenario5Min
             };
             onSubmit(submissionData, 5);
           }
