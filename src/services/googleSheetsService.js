@@ -392,6 +392,7 @@ export async function runScenario4(userInputs, onProgress) {
     await callFunction('solveForITC');
   } else {
     await writeFormula('F47', '=F51');
+    await callFunction('solveForITC');
   }
   
   onProgress(70, 'Capturing Solar + Donation (No Refund) minimum...');
@@ -450,6 +451,7 @@ export async function runScenario5(userInputs, onProgress) {
   } else {
     // Otherwise, F47 should equal F51 (note: for refund scenario, using F47 not G47)
     await writeFormula('F47', '=F51');
+    await callFunction('solveForITCRefund');
   }
   
   // Get value from G49 and write it to G47
