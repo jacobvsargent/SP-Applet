@@ -231,9 +231,9 @@ export async function runScenario1(userInputs, onProgress) {
   // Get outputs
   const outputs = await getOutputs();
   
-  // COMMENTED OUT - Create workbook copy (may be used for some users later)
+  // Create workbook copy (progress message hidden from user)
   // onProgress(18, 'Saving Do Nothing workbook...');
-  // await createWorkbookCopy('1 - Do Nothing', userInputs);
+  await createWorkbookCopy('1 - Do Nothing', userInputs);
   
   // Create snapshot (COMMENTED OUT)
   // onProgress(18, 'Saving Do Nothing snapshot...');
@@ -268,9 +268,9 @@ export async function runScenario2(userInputs, onProgress) {
   // Get outputs
   const outputs = await getOutputs();
   
-  // COMMENTED OUT - Create workbook copy (may be used for some users later)
+  // Create workbook copy (progress message hidden from user)
   // onProgress(33, 'Saving Solar Only workbook...');
-  // await createWorkbookCopy('2 - Solar Only', userInputs);
+  await createWorkbookCopy('2 - Solar Only', userInputs);
   
   // Create snapshot (COMMENTED OUT)
   // onProgress(33, 'Saving Solar Only snapshot...');
@@ -311,9 +311,9 @@ export async function runScenario3(userInputs, onProgress) {
   // Get outputs for MAX
   const maxOutputs = await getOutputs();
   
-  // COMMENTED OUT - Save workbook copy at 60% state (may be used for some users later)
+  // Save workbook copy at 60% state (progress message hidden from user)
   // onProgress(47, 'Saving Donation Only workbook...');
-  // await createWorkbookCopy('3 - Donation Only', userInputs);
+  await createWorkbookCopy('3 - Donation Only', userInputs);
   
   // Check if we should skip the minimum calculation
   if (userInputs.skipScenario5Min) {
@@ -387,9 +387,9 @@ export async function runScenario4(userInputs, onProgress) {
   // Get outputs for MAX
   const maxOutputs = await getOutputs();
   
-  // COMMENTED OUT - Save workbook copy at 60% state (may be used for some users later)
+  // Save workbook copy at 60% state (progress message hidden from user)
   // onProgress(67, 'Saving Solar + Donation (No Refund) workbook...');
-  // await createWorkbookCopy('4 - Solar + Donation (No Refund)', userInputs);
+  await createWorkbookCopy('4 - Solar + Donation (No Refund)', userInputs);
   
   // Check if we should skip the minimum calculation
   if (userInputs.skipScenario5Min) {
@@ -480,9 +480,9 @@ export async function runScenario5(userInputs, onProgress) {
   // Get outputs for MAX
   const maxOutputs = await getOutputs();
   
-  // COMMENTED OUT - Save workbook copy at 60% state (may be used for some users later)
+  // Save workbook copy at 60% state (progress message hidden from user)
   // onProgress(87, 'Saving Solar + Donation (With Refund) workbook...');
-  // await createWorkbookCopy('5 - Solar + Donation (With Refund)', userInputs);
+  await createWorkbookCopy('5 - Solar + Donation (With Refund)', userInputs);
   
   // Check if we should skip the minimum calculation
   if (userInputs.skipScenario5Min) {
