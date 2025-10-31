@@ -112,6 +112,20 @@ export default function ResultsTable({ results }) {
   return (
     <div>
       <h2>Analysis Results</h2>
+      
+      <div className="info-box" style={{
+        background: '#e8f4f8',
+        border: '1px solid #0066cc',
+        borderRadius: '4px',
+        padding: '12px 16px',
+        marginBottom: '20px',
+        fontSize: '14px'
+      }}>
+        <strong>📂 Saved Workbooks:</strong> All scenario workbooks have been saved to Google Drive. 
+        Check cell A1 in your "Blended Solution Calculator" sheet for the folder link, or look for the 
+        "Analysis - [income] - [state] - [filing status]" folder in your Google Drive.
+      </div>
+      
       <table className="results-table">
         <thead>
           <tr>

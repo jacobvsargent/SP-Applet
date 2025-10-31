@@ -389,6 +389,14 @@ function createWorkbookCopy(scenarioName, userInputs) {
     Logger.log('Success! File URL: ' + copiedFile.getUrl());
     Logger.log('Folder URL: ' + analysisFolder.getUrl());
     
+    // Write the folder URL to a visible cell in the original spreadsheet
+    // so users can find their saved workbooks even if CORS blocks the response
+    const controlSheet = ss.getSheetByName('Blended Solution Calculator');
+    if (controlSheet) {
+      // Write to a cell (e.g., A1) - adjust as needed
+      controlSheet.getRange('A1').setValue('Last Analysis Folder: ' + analysisFolder.getUrl());
+    }
+    
     return {
       success: true,
       fileName: copyName,
