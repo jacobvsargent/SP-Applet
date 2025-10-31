@@ -112,7 +112,7 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
         className="btn-secondary"
         onClick={handleEmailClick}
       >
-        Email this to myself
+        Email this to myself/client
       </button>
       
       <button 

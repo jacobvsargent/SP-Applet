@@ -143,6 +143,7 @@ export default function ResultsTable({ results, userInputs }) {
         </div>
       )}
       
+      {/* COMMENTED OUT - Saved Workbooks notification (may be used for some users later)
       <div className="info-box" style={{
         background: '#e8f4f8',
         border: '1px solid #0066cc',
@@ -155,6 +156,7 @@ export default function ResultsTable({ results, userInputs }) {
         Check cell A1 in your "Blended Solution Calculator" sheet for the folder link, or look for the 
         "Analysis - [income] - [state] - [filing status]" folder in your Google Drive.
       </div>
+      */}
       
       <table className="results-table">
         <thead>
