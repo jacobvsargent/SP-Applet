@@ -220,6 +220,9 @@ export async function runScenario1(userInputs, onProgress) {
   // Clean up before starting
   await cleanupLimited();
   
+  // Set E17 to 0 (no solar for this scenario)
+  await setValue('E17', 0);
+  
   // Set user inputs
   await setUserInputs(userInputs);
   
@@ -287,6 +290,9 @@ export async function runScenario3(userInputs, onProgress) {
   
   // Clean up before starting
   await cleanupLimited();
+  
+  // Set E17 to 0 (no solar for this scenario)
+  await setValue('E17', 0);
   
   // Set B43 to 0 (transition from Solar Only to Donation Only)
   await setValue('B43', 0);
