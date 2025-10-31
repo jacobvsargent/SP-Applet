@@ -311,25 +311,33 @@ export async function runScenario3(userInputs, onProgress) {
   // Get outputs for MAX
   const maxOutputs = await getOutputs();
   
-  onProgress(47, 'Running Donation Only scenario (Minimum)...');
+  // Save workbook copy at 60% state (before running 30%)
+  onProgress(47, 'Saving Donation Only workbook...');
+  await createWorkbookCopy('3 - Donation Only', userInputs);
+  
+  // Check if we should skip the minimum calculation
+  if (userInputs.skipScenario5Min) {
+    // Return only max values (use same values for min to avoid display issues)
+    return {
+      max: maxOutputs,
+      min: maxOutputs
+    };
+  }
+  
+  onProgress(50, 'Running Donation Only scenario (Minimum)...');
   
   // Set C90 = 30%
   await setValue('C90', 0.3);
   
-  onProgress(50, 'Capturing Donation Only minimum...');
+  onProgress(53, 'Capturing Donation Only minimum...');
   
   // Get outputs for MIN
   const minOutputs = await getOutputs();
   
-  // Create workbook copy BEFORE resetting (saves 30% state)
-  onProgress(53, 'Saving Donation Only workbook...');
-  await createWorkbookCopy('3 - Donation Only', userInputs);
-  
-  // NOW reset C90 to 60% for next scenario
+  // Reset C90 to 60% for next scenario
   await setValue('C90', 0.6);
   
   // Create snapshot (COMMENTED OUT)
-  // onProgress(53, 'Saving Donation Only snapshot...');
   // await createSnapshot('3 - Donation Only');
   
   return {
@@ -379,7 +387,20 @@ export async function runScenario4(userInputs, onProgress) {
   // Get outputs for MAX
   const maxOutputs = await getOutputs();
   
-  onProgress(67, 'Running Solar + Donation (No Refund) - Minimum...');
+  // Save workbook copy at 60% state (before running 30%)
+  onProgress(67, 'Saving Solar + Donation (No Refund) workbook...');
+  await createWorkbookCopy('4 - Solar + Donation (No Refund)', userInputs);
+  
+  // Check if we should skip the minimum calculation
+  if (userInputs.skipScenario5Min) {
+    // Return only max values (use same values for min to avoid display issues)
+    return {
+      max: maxOutputs,
+      min: maxOutputs
+    };
+  }
+  
+  onProgress(70, 'Running Solar + Donation (No Refund) - Minimum...');
   
   // Set C90 = 30%
   await setValue('C90', 0.3);
@@ -395,20 +416,15 @@ export async function runScenario4(userInputs, onProgress) {
     await callFunction('solveForITC');
   }
   
-  onProgress(70, 'Capturing Solar + Donation (No Refund) minimum...');
+  onProgress(73, 'Capturing Solar + Donation (No Refund) minimum...');
   
   // Get outputs for MIN
   const minOutputs = await getOutputs();
   
-  // Create workbook copy BEFORE resetting (saves 30% state)
-  onProgress(73, 'Saving Solar + Donation (No Refund) workbook...');
-  await createWorkbookCopy('4 - Solar + Donation (No Refund)', userInputs);
-  
-  // NOW reset C90 to 60% for next scenario
+  // Reset C90 to 60% for next scenario
   await setValue('C90', 0.6);
   
   // Create snapshot (COMMENTED OUT)
-  // onProgress(73, 'Saving Solar + Donation (No Refund) snapshot...');
   // await createSnapshot('4 - Solar + Donation (No Refund)');
   
   return {
@@ -464,15 +480,12 @@ export async function runScenario5(userInputs, onProgress) {
   // Get outputs for MAX
   const maxOutputs = await getOutputs();
   
+  // Save workbook copy at 60% state (before running 30%)
+  onProgress(87, 'Saving Solar + Donation (With Refund) workbook...');
+  await createWorkbookCopy('5 - Solar + Donation (With Refund)', userInputs);
+  
   // Check if we should skip the minimum calculation
   if (userInputs.skipScenario5Min) {
-    // Save workbook with 60% state
-    onProgress(93, 'Saving Solar + Donation (With Refund) workbook...');
-    await createWorkbookCopy('5 - Solar + Donation (With Refund)', userInputs);
-    
-    // Reset to prepare for any future scenarios
-    await setValue('C90', 0.6);
-    
     // Return only max values (use same values for min to avoid display issues)
     return {
       max: maxOutputs,
@@ -480,7 +493,7 @@ export async function runScenario5(userInputs, onProgress) {
     };
   }
   
-  onProgress(87, 'Running Solar + Donation (With Refund) - Minimum...');
+  onProgress(90, 'Running Solar + Donation (With Refund) - Minimum...');
   
   // Zero out G47
   await writeFormula('G47', '0');
@@ -501,20 +514,15 @@ export async function runScenario5(userInputs, onProgress) {
   const g49ValueMin = await getValue('G49');
   await setValue('G47', g49ValueMin);
   
-  onProgress(90, 'Capturing Solar + Donation (With Refund) minimum...');
+  onProgress(93, 'Capturing Solar + Donation (With Refund) minimum...');
   
   // Get outputs for MIN
   const minOutputs = await getOutputs();
   
-  // Create workbook copy BEFORE resetting (saves 30% state)
-  onProgress(93, 'Saving Solar + Donation (With Refund) workbook...');
-  await createWorkbookCopy('5 - Solar + Donation (With Refund)', userInputs);
-  
-  // NOW reset C90 to 60% for any future scenarios
+  // Reset C90 to 60% for any future scenarios
   await setValue('C90', 0.6);
   
   // Create snapshot (COMMENTED OUT)
-  // onProgress(93, 'Saving Solar + Donation (With Refund) snapshot...');
   // await createSnapshot('5 - Solar + Donation (With Refund)');
   
   return {

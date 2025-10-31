@@ -209,10 +209,10 @@ export default function InputForm({ onSubmit }) {
             onChange={handleChange}
             style={{ marginRight: '8px', width: 'auto', cursor: 'pointer' }}
           />
-          <span>Skip 30% donation calculation in Scenario 5 (faster results)</span>
+          <span>Skip 30% donation calculation for all scenarios (faster results)</span>
         </label>
         <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', marginLeft: '24px' }}>
-          When checked, Scenario 5 will only show the maximum (60% donation) result instead of a range.
+          When checked, all donation scenarios will only show the maximum (60% donation) result instead of a range.
         </div>
       </div>
 
