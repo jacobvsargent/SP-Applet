@@ -221,7 +221,7 @@ export default function InputForm({ onSubmit }) {
         className="btn-primary"
         disabled={!isFormValid()}
       >
-        Run Full Analysis (All 5 Scenarios)
+        Run Full Analysis (All Scenarios)
       </button>
 
       <button 
@@ -243,7 +243,7 @@ export default function InputForm({ onSubmit }) {
           }
         }}
       >
-        Run Scenario 5 Only (Solar + Donation w/ Refund)
+        Run Scenario 5 Only (Maximum Savings Only)
       </button>
 
       <div className="disclaimer">

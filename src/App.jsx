@@ -93,8 +93,8 @@ export default function App() {
 
       {appState === APP_STATE.RESULTS && results && (
         <>
-          <ResultsTable results={results} />
-          <ActionButtons onNewAnalysis={handleNewAnalysis} results={results} />
+          <ResultsTable results={results} userInputs={lastSubmittedData} />
+          <ActionButtons onNewAnalysis={handleNewAnalysis} results={results} userInputs={lastSubmittedData} />
         </>
       )}
     </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { formatCurrency } from '../utils/formatting';
 import { SCENARIOS } from '../constants';
 
-export default function ResultsTable({ results }) {
+export default function ResultsTable({ results, userInputs }) {
   /**
    * Format value - can be single value or range
    */
@@ -116,6 +116,32 @@ export default function ResultsTable({ results }) {
   return (
     <div>
       <h2>Analysis Results</h2>
+      
+      {userInputs && (
+        <div style={{
+          background: '#f5f5f5',
+          border: '1px solid #ddd',
+          borderRadius: '4px',
+          padding: '16px',
+          marginBottom: '20px'
+        }}>
+          <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '16px' }}>Your Inputs</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', fontSize: '14px' }}>
+            <div>
+              <strong>Annual Income:</strong> {formatCurrency(userInputs.income)}
+            </div>
+            <div>
+              <strong>Average Income (3 Years):</strong> {formatCurrency(userInputs.avgIncome)}
+            </div>
+            <div>
+              <strong>State of Residence:</strong> {userInputs.state}
+            </div>
+            <div>
+              <strong>Filing Status:</strong> {userInputs.filingStatus}
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="info-box" style={{
         background: '#e8f4f8',

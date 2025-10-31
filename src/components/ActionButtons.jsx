@@ -1,12 +1,22 @@
 import React from 'react';
 import { formatCurrency } from '../utils/formatting';
 
-export default function ActionButtons({ onNewAnalysis, results }) {
+export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
   const handleEmailClick = () => {
     // Generate email content
     const subject = 'Taxwise Partners Strategic Partner Analysis Results';
     
     let body = 'Here are my tax optimization scenario analysis results from the Taxwise Partners Strategic Partner Estimator Tool:\n\n';
+    
+    // Add user inputs at the top
+    if (userInputs) {
+      body += '=== YOUR INPUTS ===\n\n';
+      body += `Annual Income: ${formatCurrency(userInputs.income)}\n`;
+      body += `Average Income (Past 3 Years): ${formatCurrency(userInputs.avgIncome)}\n`;
+      body += `State of Residence: ${userInputs.state}\n`;
+      body += `Filing Status: ${userInputs.filingStatus}\n\n`;
+    }
+    
     body += '=== ANALYSIS RESULTS ===\n\n';
     
     // Helper to format values (handles ranges)
@@ -80,9 +90,16 @@ export default function ActionButtons({ onNewAnalysis, results }) {
     body += 'For a detailed custom analysis, start the Taxwise Partners Intake Form:\n';
     body += 'https://taxwisecrm.mytimelogportal.com/forms/tax-reduction-increased-profit';
     
-    // Create mailto link
+    // Create mailto link and open in new window/tab
     const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoLink;
+    
+    // Open in a new window to avoid navigating away from the current page
+    const newWindow = window.open(mailtoLink, '_blank');
+    
+    // Fallback if popup is blocked
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      window.location.href = mailtoLink;
+    }
   };
 
   const handleIntakeFormClick = () => {
