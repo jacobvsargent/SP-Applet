@@ -1,4 +1,6 @@
 /**
+ * @OnlyCurrentDoc false
+ * 
  * Google Apps Script Web App for Tax Solar Analysis
  * 
  * DEPLOYMENT INSTRUCTIONS:
@@ -11,6 +13,10 @@
  * 7. Who has access: "Anyone"
  * 8. Click "Deploy"
  * 9. Copy the Web App URL and add it to your .env file as VITE_GOOGLE_APPS_SCRIPT_URL
+ * 
+ * REQUIRED SCOPES:
+ * This script requires access to Google Drive to create workbook copies.
+ * You will be prompted to authorize these permissions when first deploying.
  */
 
 /**
@@ -394,7 +400,24 @@ function createWorkbookCopy(scenarioName, userInputs) {
     const controlSheet = ss.getSheetByName('Blended Solution Calculator');
     if (controlSheet) {
       // Write to a cell (e.g., A1) - adjust as needed
-      controlSheet.getRange('A1').setValue('Last Analysis Folder: ' + analysisFolder.getUrl());
+      try {
+        controlSheet.getRange('A1').setValue('Last Analysis Folder: ' + analysisFolder.getUrl());
+        Logger.log('Successfully wrote folder URL to A1: ' + analysisFolder.getUrl());
+      } catch (writeError) {
+        Logger.log('ERROR writing to A1: ' + writeError.toString());
+        // Try writing to a different cell as backup
+        try {
+          controlSheet.getRange('Z1').setValue('Last Analysis Folder: ' + analysisFolder.getUrl());
+          Logger.log('Successfully wrote folder URL to Z1 as backup');
+        } catch (backupError) {
+          Logger.log('ERROR writing to Z1: ' + backupError.toString());
+        }
+      }
+    } else {
+      Logger.log('ERROR: Could not find sheet "Blended Solution Calculator"');
+      // Try to log all sheet names to help debug
+      const allSheets = ss.getSheets();
+      Logger.log('Available sheets: ' + allSheets.map(s => s.getName()).join(', '));
     }
     
     return {
