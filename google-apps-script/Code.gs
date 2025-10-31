@@ -333,8 +333,9 @@ function createWorkbookCopy(scenarioName, userInputs) {
     
     Logger.log('Parent folder name: ' + parentFolder.getName());
     
-    // Create timestamp for unique naming
+    // Create timestamp for file naming and date for folder
     const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HHmmss");
+    const dateOnly = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
     
     // Format income for folder name (e.g., $75000 -> $75k)
     const formatIncome = (income) => {
@@ -344,8 +345,8 @@ function createWorkbookCopy(scenarioName, userInputs) {
       return '$' + income;
     };
     
-    // Create folder name: "Analysis - $75k - NC - Single - 2025-10-30_143022"
-    const folderName = `Analysis - ${formatIncome(userInputs.income)} - ${userInputs.state} - ${userInputs.filingStatus} - ${timestamp}`;
+    // Create folder name with date only: "Analysis - $75k - NC - Single - 2025-10-30"
+    const folderName = `Analysis - ${formatIncome(userInputs.income)} - ${userInputs.state} - ${userInputs.filingStatus} - ${dateOnly}`;
     
     Logger.log('Looking for/creating folder: ' + folderName);
     
@@ -362,38 +363,15 @@ function createWorkbookCopy(scenarioName, userInputs) {
       Logger.log('Created new folder: ' + analysisFolder.getId());
     }
     
-    // Create workbook copy name: "1 - Do Nothing - 2025-10-30_143022"
+    // Create workbook copy name with full timestamp: "1 - Do Nothing - 2025-10-30_143022"
     const copyName = `${scenarioName} - ${timestamp}`;
     
     Logger.log('Creating workbook copy: ' + copyName);
     
-    // Make a copy of the entire workbook
+    // Make a copy of the entire workbook (keeping all formulas intact)
     const copiedFile = originalFile.makeCopy(copyName, analysisFolder);
-    const copiedSpreadsheet = SpreadsheetApp.openById(copiedFile.getId());
     
-    Logger.log('Workbook copied, converting formulas to values...');
-    
-    // Convert all formulas to values in ALL sheets
-    const sheets = copiedSpreadsheet.getSheets();
-    for (let s = 0; s < sheets.length; s++) {
-      const sheet = sheets[s];
-      const dataRange = sheet.getDataRange();
-      const values = dataRange.getValues();
-      const formulas = dataRange.getFormulas();
-      
-      // Replace formulas with their current values
-      for (let i = 0; i < formulas.length; i++) {
-        for (let j = 0; j < formulas[i].length; j++) {
-          if (formulas[i][j]) {
-            // This cell has a formula, replace it with its value
-            sheet.getRange(i + 1, j + 1).setValue(values[i][j]);
-          }
-        }
-      }
-    }
-    
-    // Save changes
-    SpreadsheetApp.flush();
+    Logger.log('Workbook copied successfully with formulas preserved');
     
     Logger.log('Success! File URL: ' + copiedFile.getUrl());
     Logger.log('Folder URL: ' + analysisFolder.getUrl());

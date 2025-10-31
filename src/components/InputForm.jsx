@@ -247,7 +247,7 @@ export default function InputForm({ onSubmit }) {
       </button>
 
       <div className="disclaimer">
-        <p><strong>Disclaimer:</strong> [Your disclaimer text will go here. This is a placeholder for legal/informational text about the analysis.]</p>
+        <p><strong>Disclaimer:</strong> these estimates are based on a number of assumptions and may change with further information about state specific deduction limits, income type and timing, previous charitable giving, etc. Use the "Start Taxwise Partners Intake Form" to get a full custom analysis by a member of the Taxwise team.</p>
       </div>
     </form>
   );
