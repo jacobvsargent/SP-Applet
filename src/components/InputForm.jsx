@@ -249,6 +249,15 @@ export default function InputForm({ onSubmit }) {
       <div className="disclaimer">
         <p><strong>Disclaimer:</strong> these estimates are based on a number of assumptions and may change with further information about state specific deduction limits, income type and timing, previous charitable giving, etc. Use the "Start Taxwise Partners Intake Form" to get a full custom analysis by a member of the Taxwise team.</p>
       </div>
+
+      <button 
+        type="button"
+        className="btn-info"
+        style={{ width: '100%', marginTop: '20px' }}
+        onClick={() => window.open('https://taxwisecrm.mytimelogportal.com/forms/tax-reduction-increased-profit', '_blank')}
+      >
+        Start the Taxwise Partners Intake Form
+      </button>
     </form>
   );
 }
