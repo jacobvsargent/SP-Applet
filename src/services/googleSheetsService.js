@@ -135,6 +135,14 @@ export async function forceRecalculation() {
 }
 
 /**
+ * Clean up cells by calling zeroCellsByColorLimited
+ */
+export async function cleanupLimited() {
+  await makeRequest('cleanupLimited');
+  await wait(WAIT_TIME);
+}
+
+/**
  * Create a snapshot of the Blended Solution Calculator sheet
  * @param {string} scenarioName - Name of the scenario
  * @returns {Promise<object>} - Snapshot info
@@ -209,6 +217,9 @@ export async function cleanup() {
 export async function runScenario1(userInputs, onProgress) {
   onProgress(10, 'Setting up baseline scenario...');
   
+  // Clean up before starting
+  await cleanupLimited();
+  
   // Set user inputs
   await setUserInputs(userInputs);
   
@@ -236,6 +247,9 @@ export async function runScenario1(userInputs, onProgress) {
  */
 export async function runScenario2(userInputs, onProgress) {
   onProgress(20, 'Running Solar Only scenario...');
+  
+  // Clean up before starting
+  await cleanupLimited();
   
   // Write formula in F47
   await writeFormula('F47', '=F51');
@@ -267,6 +281,9 @@ export async function runScenario2(userInputs, onProgress) {
  */
 export async function runScenario3(userInputs, onProgress) {
   onProgress(35, 'Running Donation Only scenario (Maximum)...');
+  
+  // Clean up before starting
+  await cleanupLimited();
   
   // Set B43 to 0 (transition from Solar Only to Donation Only)
   await setValue('B43', 0);
@@ -320,6 +337,9 @@ export async function runScenario3(userInputs, onProgress) {
  */
 export async function runScenario4(userInputs, onProgress) {
   onProgress(55, 'Running Solar + Donation (No Refund) - Maximum...');
+  
+  // Clean up before starting
+  await cleanupLimited();
   
   // Step 1: Do donation part first
   await writeFormula('C92', '=MAX(0, B92)');
@@ -392,6 +412,9 @@ export async function runScenario4(userInputs, onProgress) {
  */
 export async function runScenario5(userInputs, onProgress) {
   onProgress(75, 'Running Solar + Donation (With Refund) - Maximum...');
+  
+  // Clean up before starting
+  await cleanupLimited();
   
   // Step 1: Do donation part first
   await writeFormula('C92', '=MAX(0, B92)');

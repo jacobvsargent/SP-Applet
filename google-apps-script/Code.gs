@@ -65,6 +65,9 @@ function doPost(e) {
       case 'cleanup':
         result = cleanup();
         break;
+      case 'cleanupLimited':
+        result = cleanupLimited();
+        break;
       default:
         result = { error: 'Unknown action: ' + action };
     }
@@ -446,10 +449,20 @@ function cleanup() {
 }
 
 /**
+ * Clean up by calling zeroCellsByColorLimited (runs before each scenario)
+ */
+function cleanupLimited() {
+  zeroCellsByColorLimited();
+  
+  return { success: true };
+}
+
+/**
  * NOTE: The following functions should already exist in your Google Sheet's script:
  * - solveForITC()
  * - solveForITCRefund()
  * - zeroCellsByColor()
+ * - zeroCellsByColorLimited()
  * 
  * If they don't exist, you'll need to add them or this script will fail.
  * These functions are specific to your sheet's calculation logic.
