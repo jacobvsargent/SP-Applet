@@ -541,12 +541,12 @@ export async function runScenario5Only(userInputs, onProgress) {
   try {
     onProgress(0, 'Setting up your analysis...');
     
-    // Set user inputs
-    onProgress(10, 'Setting up inputs...');
-    await setUserInputs(userInputs);
+    // Always run Scenario 1 (Do Nothing) first for baseline
+    onProgress(10, 'Running Scenario 1: Baseline...');
+    const scenario1 = await runScenario1(userInputs, onProgress);
     
     // Run Scenario 5
-    onProgress(20, 'Running Solar + Donation (With Refund)...');
+    onProgress(50, 'Running Solar + Donation (With Refund)...');
     const scenario5 = await runScenario5(userInputs, onProgress);
     
     // Cleanup
@@ -555,9 +555,9 @@ export async function runScenario5Only(userInputs, onProgress) {
     
     onProgress(100, 'Analysis complete!');
     
-    // Return in same format as full analysis but only scenario5 populated
+    // Return in same format as full analysis with scenario1 and scenario5 populated
     return {
-      scenario1: null,
+      scenario1,
       scenario2: null,
       scenario3: null,
       scenario4: null,

@@ -21,18 +21,36 @@ export default function ResultsTable({ results, userInputs }) {
   };
 
   /**
-   * Calculate "What You Keep" (Taxable Income - Tax Due)
+   * Calculate baseline "What You Keep" for Do Nothing scenario (X)
    */
-  const calculateWhatYouKeep = (agi, taxDue) => {
-    if (typeof agi === 'object' && typeof taxDue === 'object') {
-      // Both are ranges
-      return {
-        min: agi.min - taxDue.max, // Worst case: lowest income, highest tax
-        max: agi.max - taxDue.min  // Best case: highest income, lowest tax
-      };
-    } else {
-      // Single values
+  const calculateBaselineWhatYouKeep = () => {
+    if (!results.scenario1) return 0;
+    return results.scenario1.agi - results.scenario1.totalTaxDue;
+  };
+
+  /**
+   * Calculate "What You Keep" for a scenario
+   * For Do Nothing: Taxable Income - Tax Due
+   * For other scenarios: X + Net Gain (where X is Do Nothing's "What You Keep")
+   */
+  const calculateWhatYouKeep = (agi, taxDue, netGain, isDoNothing) => {
+    if (isDoNothing) {
+      // For Do Nothing scenario, calculate normally
       return agi - taxDue;
+    } else {
+      // For other scenarios: X + Net Gain
+      const baselineX = calculateBaselineWhatYouKeep();
+      
+      if (typeof netGain === 'object' && netGain.min !== undefined && netGain.max !== undefined) {
+        // Net Gain is a range, so What You Keep will be a range
+        return {
+          min: baselineX + netGain.min,
+          max: baselineX + netGain.max
+        };
+      } else {
+        // Net Gain is a single value
+        return baselineX + netGain;
+      }
     }
   };
 
@@ -169,23 +187,26 @@ export default function ResultsTable({ results, userInputs }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => (
-            <tr key={index}>
-              <td className="scenario-name">{row.scenario}</td>
-              <td className="value-neutral">
-                {formatValue(row.data.agi)}
-              </td>
-              <td className="value-negative">
-                {formatValue(row.data.totalTaxDue)}
-              </td>
-              <td className="value-positive">
-                {formatValue(calculateWhatYouKeep(row.data.agi, row.data.totalTaxDue))}
-              </td>
-              <td className={getNetGainClass(row.data.totalNetGain)}>
-                {formatValue(row.data.totalNetGain)}
-              </td>
-            </tr>
-          ))}
+          {rows.map((row, index) => {
+            const isDoNothing = row.scenario === SCENARIOS.DO_NOTHING;
+            return (
+              <tr key={index}>
+                <td className="scenario-name">{row.scenario}</td>
+                <td className="value-neutral">
+                  {formatValue(row.data.agi)}
+                </td>
+                <td className="value-negative">
+                  {formatValue(row.data.totalTaxDue)}
+                </td>
+                <td className="value-positive">
+                  {formatValue(calculateWhatYouKeep(row.data.agi, row.data.totalTaxDue, row.data.totalNetGain, isDoNothing))}
+                </td>
+                <td className={getNetGainClass(row.data.totalNetGain)}>
+                  {formatValue(row.data.totalNetGain)}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
