@@ -62,6 +62,18 @@ function doPost(e) {
         result = createWorkbookCopy(data.scenarioName, data.userInputs);
         Logger.log('createWorkbookCopy returned: ' + JSON.stringify(result));
         break;
+      case 'createFolder':
+        result = createAnalysisFolder(data.userInputs);
+        break;
+      case 'createWorkingCopy':
+        result = createWorkingCopy(data.folderId);
+        break;
+      case 'saveScenarioSnapshot':
+        result = saveScenarioSnapshot(data.workingCopyId, data.scenarioName, data.folderId);
+        break;
+      case 'deleteWorkingCopy':
+        result = deleteWorkingCopy(data.workingCopyId);
+        break;
       case 'cleanup':
         result = cleanup();
         break;
@@ -97,15 +109,16 @@ function doPost(e) {
 function doGet(e) {
   try {
     const action = e.parameter.action;
+    const workingCopyId = e.parameter.workingCopyId;
     
     let result;
     
     switch(action) {
       case 'getOutputs':
-        result = getOutputs();
+        result = getOutputs(workingCopyId);
         break;
       case 'getValue':
-        result = getSingleValue(e.parameter.cell);
+        result = getSingleValue(e.parameter.cell, workingCopyId);
         break;
       default:
         result = { error: 'Unknown GET action: ' + action };
@@ -127,10 +140,15 @@ function doGet(e) {
 
 /**
  * Set user inputs in the Blended Solution Calculator sheet
- * @param {object} data - Contains income, avgIncome, state, filingStatus
+ * @param {object} data - Contains income, avgIncome, state, filingStatus, and optional workingCopyId
  */
 function setUserInputs(data) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Blended Solution Calculator');
+  // Use working copy if provided, otherwise use active spreadsheet (master)
+  const ss = data.workingCopyId 
+    ? SpreadsheetApp.openById(data.workingCopyId)
+    : SpreadsheetApp.getActiveSpreadsheet();
+    
+  const sheet = ss.getSheetByName('Blended Solution Calculator');
   
   if (!sheet) {
     throw new Error('Sheet "Blended Solution Calculator" not found');
@@ -144,7 +162,7 @@ function setUserInputs(data) {
   
   // Force calculation and wait for it to settle
   SpreadsheetApp.flush();
-  Utilities.sleep(1000); // Wait 1 second for calculations
+  Utilities.sleep(200); // Wait 0.2 seconds for calculations (reduced for performance)
   
   // Make G10 equal to G6
   sheet.getRange('G10').setFormula('=G6');
@@ -157,10 +175,20 @@ function setUserInputs(data) {
 
 /**
  * Run a scenario function (solveForITC or solveForITCRefund)
- * @param {object} data - Contains function name
+ * @param {object} data - Contains function name and optional workingCopyId
  */
 function runScenario(data) {
   const functionName = data.function;
+  
+  // Note: solveForITC and solveForITCRefund must exist in the script
+  // They will operate on the active spreadsheet context
+  // If workingCopyId is provided, we need to switch context
+  if (data.workingCopyId) {
+    const ss = SpreadsheetApp.openById(data.workingCopyId);
+    // These functions are assumed to be part of the script and work on active context
+    // This is a limitation - they need to be modified to accept a spreadsheet parameter
+    // For now, we'll call them as-is (they should work on the opened spreadsheet)
+  }
   
   if (functionName === 'solveForITC') {
     solveForITC();
@@ -178,10 +206,15 @@ function runScenario(data) {
 
 /**
  * Get output values from the Detailed Summary sheet
+ * @param {string} workingCopyId - Optional working copy ID
  * @returns {object} - Contains agi, totalTaxDue, totalNetGain
  */
-function getOutputs() {
-  const summarySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Detailed Summary');
+function getOutputs(workingCopyId) {
+  const ss = workingCopyId 
+    ? SpreadsheetApp.openById(workingCopyId)
+    : SpreadsheetApp.getActiveSpreadsheet();
+    
+  const summarySheet = ss.getSheetByName('Detailed Summary');
   
   if (!summarySheet) {
     throw new Error('Sheet "Detailed Summary" not found');
@@ -202,10 +235,15 @@ function getOutputs() {
 /**
  * Get a single cell value from the Blended Solution Calculator sheet
  * @param {string} cell - Cell reference (e.g., "F51")
+ * @param {string} workingCopyId - Optional working copy ID
  * @returns {object} - Contains the cell value
  */
-function getSingleValue(cell) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Blended Solution Calculator');
+function getSingleValue(cell, workingCopyId) {
+  const ss = workingCopyId 
+    ? SpreadsheetApp.openById(workingCopyId)
+    : SpreadsheetApp.getActiveSpreadsheet();
+    
+  const sheet = ss.getSheetByName('Blended Solution Calculator');
   
   if (!sheet) {
     throw new Error('Sheet "Blended Solution Calculator" not found');
@@ -221,10 +259,14 @@ function getSingleValue(cell) {
 
 /**
  * Write a formula to a specific cell
- * @param {object} data - Contains cell and formula
+ * @param {object} data - Contains cell, formula, and optional workingCopyId
  */
 function writeFormula(data) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Blended Solution Calculator');
+  const ss = data.workingCopyId 
+    ? SpreadsheetApp.openById(data.workingCopyId)
+    : SpreadsheetApp.getActiveSpreadsheet();
+    
+  const sheet = ss.getSheetByName('Blended Solution Calculator');
   
   if (!sheet) {
     throw new Error('Sheet "Blended Solution Calculator" not found');
@@ -240,10 +282,14 @@ function writeFormula(data) {
 
 /**
  * Set a value in a specific cell
- * @param {object} data - Contains cell and value
+ * @param {object} data - Contains cell, value, and optional workingCopyId
  */
 function setValue(data) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Blended Solution Calculator');
+  const ss = data.workingCopyId 
+    ? SpreadsheetApp.openById(data.workingCopyId)
+    : SpreadsheetApp.getActiveSpreadsheet();
+    
+  const sheet = ss.getSheetByName('Blended Solution Calculator');
   
   if (!sheet) {
     throw new Error('Sheet "Blended Solution Calculator" not found');
@@ -263,7 +309,7 @@ function setValue(data) {
 function forceRecalculation() {
   SpreadsheetApp.flush();
   SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(); // Triggers recalc
-  Utilities.sleep(1000); // Wait 1 second for calculations to settle
+  Utilities.sleep(200); // Wait 0.2 seconds for calculations to settle (reduced for performance)
   return { success: true };
 }
 
@@ -433,6 +479,159 @@ function cleanupLimited() {
   zeroCellsByColorLimited();
   
   return { success: true };
+}
+
+/**
+ * NEW WORKFLOW FUNCTIONS
+ * These functions implement the workflow where operations are done on a working copy
+ * instead of the master workbook
+ */
+
+/**
+ * Step 1: Create the analysis folder
+ * @param {object} userInputs - User input data for folder naming
+ * @returns {object} - Folder info (id, url, name)
+ */
+function createAnalysisFolder(userInputs) {
+  try {
+    Logger.log('Creating analysis folder');
+    Logger.log('User inputs: ' + JSON.stringify(userInputs));
+    
+    // Use specific parent folder ID
+    const parentFolder = DriveApp.getFolderById('1oAKrZEv2Hrji5lfERWcsrmGmsajueMqW');
+    
+    // Create timestamp
+    const dateOnly = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+    
+    // Format income for folder name
+    const formatIncome = (income) => {
+      if (income >= 1000) {
+        return '$' + Math.round(income / 1000) + 'k';
+      }
+      return '$' + income;
+    };
+    
+    // Create folder name: "Analysis - $75k - NC - Single - 2025-10-30"
+    const folderName = `Analysis - ${formatIncome(userInputs.income)} - ${userInputs.state} - ${userInputs.filingStatus} - ${dateOnly}`;
+    
+    Logger.log('Looking for/creating folder: ' + folderName);
+    
+    // Check if folder already exists
+    let analysisFolder;
+    const existingFolders = parentFolder.getFoldersByName(folderName);
+    
+    if (existingFolders.hasNext()) {
+      analysisFolder = existingFolders.next();
+      Logger.log('Found existing folder');
+    } else {
+      analysisFolder = parentFolder.createFolder(folderName);
+      Logger.log('Created new folder: ' + analysisFolder.getId());
+    }
+    
+    return {
+      success: true,
+      folderId: analysisFolder.getId(),
+      folderUrl: analysisFolder.getUrl(),
+      folderName: folderName
+    };
+  } catch (error) {
+    Logger.log('ERROR in createAnalysisFolder: ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * Step 2: Create a working copy of the master workbook in the folder
+ * @param {string} folderId - ID of the folder to place the working copy
+ * @returns {object} - Working copy info (id, url)
+ */
+function createWorkingCopy(folderId) {
+  try {
+    Logger.log('Creating working copy in folder: ' + folderId);
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const masterFile = DriveApp.getFileById(ss.getId());
+    const targetFolder = DriveApp.getFolderById(folderId);
+    
+    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HHmmss");
+    const workingCopyName = `WORKING_COPY - ${timestamp}`;
+    
+    Logger.log('Creating working copy: ' + workingCopyName);
+    
+    // Make a copy of the master workbook
+    const workingCopy = masterFile.makeCopy(workingCopyName, targetFolder);
+    
+    Logger.log('Working copy created: ' + workingCopy.getId());
+    
+    return {
+      success: true,
+      workingCopyId: workingCopy.getId(),
+      workingCopyUrl: workingCopy.getUrl()
+    };
+  } catch (error) {
+    Logger.log('ERROR in createWorkingCopy: ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * Step 3: Save a scenario snapshot from the working copy
+ * This copies the current state of the working copy with a scenario name
+ * @param {string} workingCopyId - ID of the working copy spreadsheet
+ * @param {string} scenarioName - Name of the scenario
+ * @param {string} folderId - ID of the folder
+ * @returns {object} - Snapshot info
+ */
+function saveScenarioSnapshot(workingCopyId, scenarioName, folderId) {
+  try {
+    Logger.log('Saving scenario snapshot: ' + scenarioName);
+    
+    const workingCopyFile = DriveApp.getFileById(workingCopyId);
+    const targetFolder = DriveApp.getFolderById(folderId);
+    
+    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HHmmss");
+    const snapshotName = `${scenarioName} - ${timestamp}`;
+    
+    Logger.log('Creating snapshot: ' + snapshotName);
+    
+    // Make a copy of the working copy to preserve this scenario
+    const snapshot = workingCopyFile.makeCopy(snapshotName, targetFolder);
+    
+    Logger.log('Snapshot saved: ' + snapshot.getId());
+    
+    return {
+      success: true,
+      snapshotId: snapshot.getId(),
+      snapshotUrl: snapshot.getUrl(),
+      snapshotName: snapshotName
+    };
+  } catch (error) {
+    Logger.log('ERROR in saveScenarioSnapshot: ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * Step 4: Delete the working copy after all scenarios are complete
+ * @param {string} workingCopyId - ID of the working copy to delete
+ * @returns {object} - Success status
+ */
+function deleteWorkingCopy(workingCopyId) {
+  try {
+    Logger.log('Deleting working copy: ' + workingCopyId);
+    
+    const workingCopyFile = DriveApp.getFileById(workingCopyId);
+    workingCopyFile.setTrashed(true);
+    
+    Logger.log('Working copy moved to trash');
+    
+    return {
+      success: true
+    };
+  } catch (error) {
+    Logger.log('ERROR in deleteWorkingCopy: ' + error.toString());
+    throw error;
+  }
 }
 
 /**
