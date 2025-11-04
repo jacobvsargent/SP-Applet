@@ -578,23 +578,67 @@ function createWorkingCopy(folderId) {
  * Step 3: Save a scenario snapshot from the working copy
  * This copies the current state of the working copy with a scenario name
  * @param {string} workingCopyId - ID of the working copy spreadsheet
- * @param {string} scenarioName - Name of the scenario
+ * @param {number} scenarioNumber - Scenario number (1-5)
  * @param {string} folderId - ID of the folder
  * @returns {object} - Snapshot info
  */
-function saveScenarioSnapshot(workingCopyId, scenarioName, folderId) {
+function saveScenarioSnapshot(workingCopyId, scenarioNumber, folderId) {
   try {
-    Logger.log('Saving scenario snapshot: ' + scenarioName);
+    Logger.log('Saving scenario snapshot: ' + scenarioNumber);
     
-    const workingCopyFile = DriveApp.getFileById(workingCopyId);
-    const targetFolder = DriveApp.getFolderById(folderId);
+    // Open the working copy to read values
+    const workingCopySpreadsheet = SpreadsheetApp.openById(workingCopyId);
+    const sheet = workingCopySpreadsheet.getSheetByName('Blended Solution Calculator');
+    
+    if (!sheet) {
+      throw new Error('Sheet "Blended Solution Calculator" not found in working copy');
+    }
+    
+    // Read the three values
+    const b43Value = sheet.getRange('B43').getValue() || 0;
+    const c92Value = sheet.getRange('C92').getValue() || 0;
+    const g47Value = sheet.getRange('G47').getValue() || 0;
+    
+    Logger.log('Values - B43: ' + b43Value + ', C92: ' + c92Value + ', G47: ' + g47Value);
+    
+    // Helper function to format value as $XXXk (rounded to nearest thousand)
+    const formatValue = (value, label) => {
+      const roundedThousands = Math.round(value / 1000);
+      if (roundedThousands > 0) {
+        return `$${roundedThousands}k ${label}`;
+      }
+      return '';
+    };
+    
+    // Build the filename parts
+    const parts = [scenarioNumber + ' -'];
+    
+    const solarPart = formatValue(b43Value, 'Solar');
+    if (solarPart) parts.push(solarPart);
+    
+    const medtechPart = formatValue(c92Value, 'Medtech');
+    if (medtechPart) parts.push(medtechPart);
+    
+    const refundPart = formatValue(g47Value, 'Refund');
+    if (refundPart) parts.push(refundPart);
+    
+    // Join with underscore between value parts
+    let snapshotName;
+    if (parts.length === 1) {
+      // No values > 0, just use scenario number
+      snapshotName = scenarioNumber.toString();
+    } else {
+      snapshotName = parts[0] + ' ' + parts.slice(1).join('_');
+    }
     
     const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HHmmss");
-    const snapshotName = `${scenarioName} - ${timestamp}`;
+    snapshotName = `${snapshotName} - ${timestamp}`;
     
-    Logger.log('Creating snapshot: ' + snapshotName);
+    Logger.log('Creating snapshot with name: ' + snapshotName);
     
     // Make a copy of the working copy to preserve this scenario
+    const workingCopyFile = DriveApp.getFileById(workingCopyId);
+    const targetFolder = DriveApp.getFolderById(folderId);
     const snapshot = workingCopyFile.makeCopy(snapshotName, targetFolder);
     
     Logger.log('Snapshot saved: ' + snapshot.getId());
@@ -607,6 +651,7 @@ function saveScenarioSnapshot(workingCopyId, scenarioName, folderId) {
     };
   } catch (error) {
     Logger.log('ERROR in saveScenarioSnapshot: ' + error.toString());
+    Logger.log('Stack: ' + error.stack);
     throw error;
   }
 }

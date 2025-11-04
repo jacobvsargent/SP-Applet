@@ -120,12 +120,12 @@ export async function createWorkingCopy(folderId) {
 /**
  * Save a scenario snapshot from the working copy
  * @param {string} workingCopyId - ID of the working copy
- * @param {string} scenarioName - Name of the scenario
+ * @param {number} scenarioNumber - Scenario number (1-5)
  * @param {string} folderId - ID of the folder
  * @returns {Promise<object>} - Snapshot info
  */
-export async function saveScenarioSnapshot(workingCopyId, scenarioName, folderId) {
-  const result = await makeRequest('saveScenarioSnapshot', { workingCopyId, scenarioName, folderId });
+export async function saveScenarioSnapshot(workingCopyId, scenarioNumber, folderId) {
+  const result = await makeRequest('saveScenarioSnapshot', { workingCopyId, scenarioNumber, folderId });
   await wait(WAIT_TIME);
   return result;
 }
@@ -299,7 +299,7 @@ export async function runScenario1(userInputs, onProgress, workingCopyId = null,
   // Create a full workbook copy for this scenario
   if (workingCopyId && folderId) {
     // New workflow: Create full workbook copy from working copy (all sheets preserved)
-    await saveScenarioSnapshot(workingCopyId, '1 - Do Nothing', folderId);
+    await saveScenarioSnapshot(workingCopyId, 1, folderId);
   } else {
     // Legacy workflow: Create workbook copy from master
     await createWorkbookCopy('1 - Do Nothing', userInputs);
@@ -336,7 +336,7 @@ export async function runScenario2(userInputs, onProgress, workingCopyId = null,
   // Create a full workbook copy for this scenario
   if (workingCopyId && folderId) {
     // New workflow: Create full workbook copy from working copy (all sheets preserved)
-    await saveScenarioSnapshot(workingCopyId, '2 - Solar Only', folderId);
+    await saveScenarioSnapshot(workingCopyId, 2, folderId);
   } else {
     // Legacy workflow: Create workbook copy from master
     await createWorkbookCopy('2 - Solar Only', userInputs);
@@ -377,7 +377,7 @@ export async function runScenario3(userInputs, onProgress, workingCopyId = null,
   // Create a full workbook copy for this scenario
   if (workingCopyId && folderId) {
     // New workflow: Create full workbook copy from working copy (all sheets preserved)
-    await saveScenarioSnapshot(workingCopyId, '3 - Donation Only', folderId);
+    await saveScenarioSnapshot(workingCopyId, 3, folderId);
   } else {
     // Legacy workflow: Create workbook copy from master
     await createWorkbookCopy('3 - Donation Only', userInputs);
@@ -454,7 +454,7 @@ export async function runScenario4(userInputs, onProgress, workingCopyId = null,
   // Create a full workbook copy for this scenario
   if (workingCopyId && folderId) {
     // New workflow: Create full workbook copy from working copy (all sheets preserved)
-    await saveScenarioSnapshot(workingCopyId, '4 - Solar + Donation (No Refund)', folderId);
+    await saveScenarioSnapshot(workingCopyId, 4, folderId);
   } else {
     // Legacy workflow: Create workbook copy from master
     await createWorkbookCopy('4 - Solar + Donation (No Refund)', userInputs);
@@ -546,7 +546,7 @@ export async function runScenario5(userInputs, onProgress, workingCopyId = null,
   // Create a full workbook copy for this scenario
   if (workingCopyId && folderId) {
     // New workflow: Create full workbook copy from working copy (all sheets preserved)
-    await saveScenarioSnapshot(workingCopyId, '5 - Solar + Donation (With Refund)', folderId);
+    await saveScenarioSnapshot(workingCopyId, 5, folderId);
   } else {
     // Legacy workflow: Create workbook copy from master
     await createWorkbookCopy('5 - Solar + Donation (With Refund)', userInputs);
