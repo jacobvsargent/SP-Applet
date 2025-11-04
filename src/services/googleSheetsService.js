@@ -118,19 +118,6 @@ export async function createWorkingCopy(folderId) {
 }
 
 /**
- * Save a scenario snapshot from the working copy
- * @param {string} workingCopyId - ID of the working copy
- * @param {number} scenarioNumber - Scenario number (1-5)
- * @param {string} folderId - ID of the folder
- * @returns {Promise<object>} - Snapshot info
- */
-export async function saveScenarioSnapshot(workingCopyId, scenarioNumber, folderId) {
-  const result = await makeRequest('saveScenarioSnapshot', { workingCopyId, scenarioNumber, folderId });
-  await wait(WAIT_TIME);
-  return result;
-}
-
-/**
  * Delete the working copy after analysis is complete
  * @param {string} workingCopyId - ID of the working copy to delete
  * @returns {Promise<object>} - Success status
@@ -204,25 +191,14 @@ export async function cleanupLimited() {
 }
 
 /**
- * Create a snapshot of the Blended Solution Calculator sheet
- * @param {string} scenarioName - Name of the scenario
- * @returns {Promise<object>} - Snapshot info
- */
-// export async function createSnapshot(scenarioName) {
-//   await makeRequest('createSnapshot', { scenarioName });
-//   await wait(WAIT_TIME);
-//   return { success: true };
-// }
-
-/**
  * Create a full workbook copy
- * @param {string} scenarioName - Name of the scenario
+ * @param {number} scenarioNumber - Scenario number (1-5)
  * @param {object} userInputs - User input data for folder naming
  * @returns {Promise<object>} - Copy info
  */
-export async function createWorkbookCopy(scenarioName, userInputs) {
-  console.log('📁 Creating workbook copy:', scenarioName, userInputs);
-  const result = await makeRequest('createWorkbookCopy', { scenarioName, userInputs });
+export async function createWorkbookCopy(scenarioNumber, userInputs) {
+  console.log('📁 Creating workbook copy for scenario:', scenarioNumber, userInputs);
+  const result = await makeRequest('createWorkbookCopy', { scenarioNumber, userInputs });
   console.log('📁 Workbook copy result:', result);
   
   if (result.folderUrl) {
@@ -279,7 +255,7 @@ export async function cleanup() {
  * @param {object} userInputs - User input data
  * @param {function} onProgress - Progress callback
  * @param {string} workingCopyId - Optional working copy ID
- * @param {string} folderId - Optional folder ID for saving snapshots
+ * @param {string} folderId - Optional folder ID (unused, kept for compatibility)
  * @returns {Promise<object>} - Scenario results
  */
 export async function runScenario1(userInputs, onProgress, workingCopyId = null, folderId = null) {
@@ -297,13 +273,7 @@ export async function runScenario1(userInputs, onProgress, workingCopyId = null,
   const outputs = await getOutputs(workingCopyId);
   
   // Create a full workbook copy for this scenario
-  if (workingCopyId && folderId) {
-    // New workflow: Create full workbook copy from working copy (all sheets preserved)
-    await saveScenarioSnapshot(workingCopyId, 1, folderId);
-  } else {
-    // Legacy workflow: Create workbook copy from master
-    await createWorkbookCopy('1 - Do Nothing', userInputs);
-  }
+  await createWorkbookCopy(1, userInputs);
   
   return outputs;
 }
@@ -313,7 +283,7 @@ export async function runScenario1(userInputs, onProgress, workingCopyId = null,
  * @param {object} userInputs - User input data
  * @param {function} onProgress - Progress callback
  * @param {string} workingCopyId - Optional working copy ID
- * @param {string} folderId - Optional folder ID for saving snapshots
+ * @param {string} folderId - Optional folder ID (unused, kept for compatibility)
  * @returns {Promise<object>} - Scenario results
  */
 export async function runScenario2(userInputs, onProgress, workingCopyId = null, folderId = null) {
@@ -334,13 +304,7 @@ export async function runScenario2(userInputs, onProgress, workingCopyId = null,
   const outputs = await getOutputs(workingCopyId);
   
   // Create a full workbook copy for this scenario
-  if (workingCopyId && folderId) {
-    // New workflow: Create full workbook copy from working copy (all sheets preserved)
-    await saveScenarioSnapshot(workingCopyId, 2, folderId);
-  } else {
-    // Legacy workflow: Create workbook copy from master
-    await createWorkbookCopy('2 - Solar Only', userInputs);
-  }
+  await createWorkbookCopy(2, userInputs);
   
   return outputs;
 }
@@ -375,13 +339,7 @@ export async function runScenario3(userInputs, onProgress, workingCopyId = null,
   const maxOutputs = await getOutputs(workingCopyId);
   
   // Create a full workbook copy for this scenario
-  if (workingCopyId && folderId) {
-    // New workflow: Create full workbook copy from working copy (all sheets preserved)
-    await saveScenarioSnapshot(workingCopyId, 3, folderId);
-  } else {
-    // Legacy workflow: Create workbook copy from master
-    await createWorkbookCopy('3 - Donation Only', userInputs);
-  }
+  await createWorkbookCopy(3, userInputs);
   
   // Check if we should skip the minimum calculation
   if (userInputs.skipScenario5Min) {
@@ -416,7 +374,7 @@ export async function runScenario3(userInputs, onProgress, workingCopyId = null,
  * @param {object} userInputs - User input data
  * @param {function} onProgress - Progress callback
  * @param {string} workingCopyId - Optional working copy ID
- * @param {string} folderId - Optional folder ID for saving snapshots
+ * @param {string} folderId - Optional folder ID (unused, kept for compatibility)
  * @returns {Promise<object>} - Scenario results with min and max
  */
 export async function runScenario4(userInputs, onProgress, workingCopyId = null, folderId = null) {
@@ -452,13 +410,7 @@ export async function runScenario4(userInputs, onProgress, workingCopyId = null,
   const maxOutputs = await getOutputs(workingCopyId);
   
   // Create a full workbook copy for this scenario
-  if (workingCopyId && folderId) {
-    // New workflow: Create full workbook copy from working copy (all sheets preserved)
-    await saveScenarioSnapshot(workingCopyId, 4, folderId);
-  } else {
-    // Legacy workflow: Create workbook copy from master
-    await createWorkbookCopy('4 - Solar + Donation (No Refund)', userInputs);
-  }
+  await createWorkbookCopy(4, userInputs);
   
   // Check if we should skip the minimum calculation
   if (userInputs.skipScenario5Min) {
@@ -544,13 +496,7 @@ export async function runScenario5(userInputs, onProgress, workingCopyId = null,
   const maxOutputs = await getOutputs(workingCopyId);
   
   // Create a full workbook copy for this scenario
-  if (workingCopyId && folderId) {
-    // New workflow: Create full workbook copy from working copy (all sheets preserved)
-    await saveScenarioSnapshot(workingCopyId, 5, folderId);
-  } else {
-    // Legacy workflow: Create workbook copy from master
-    await createWorkbookCopy('5 - Solar + Donation (With Refund)', userInputs);
-  }
+  await createWorkbookCopy(5, userInputs);
   
   // Check if we should skip the minimum calculation
   if (userInputs.skipScenario5Min) {

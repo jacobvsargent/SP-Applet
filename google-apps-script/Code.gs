@@ -52,9 +52,6 @@ function doPost(e) {
       case 'forceRecalc':
         result = forceRecalculation();
         break;
-      // case 'createSnapshot':
-      //   result = createSnapshot(data.scenarioName);
-      //   break;
       case 'createWorkbookCopy':
         Logger.log('doPost received createWorkbookCopy request');
         Logger.log('scenarioName: ' + data.scenarioName);
@@ -67,9 +64,6 @@ function doPost(e) {
         break;
       case 'createWorkingCopy':
         result = createWorkingCopy(data.folderId);
-        break;
-      case 'saveScenarioSnapshot':
-        result = saveScenarioSnapshot(data.workingCopyId, data.scenarioName, data.folderId);
         break;
       case 'deleteWorkingCopy':
         result = deleteWorkingCopy(data.workingCopyId);
@@ -314,65 +308,60 @@ function forceRecalculation() {
 }
 
 /**
- * Create a snapshot of the Blended Solution Calculator sheet
- * The snapshot will have all formulas converted to static values
- * @param {string} scenarioName - Name of the scenario (e.g., "Do Nothing", "Solar Only")
- */
-// COMMENTED OUT - Now using createWorkbookCopy instead
-// function createSnapshot(scenarioName) {
-//   const ss = SpreadsheetApp.getActiveSpreadsheet();
-//   const calcSheet = ss.getSheetByName('Blended Solution Calculator');
-//   
-//   if (!calcSheet) {
-//     throw new Error('Sheet "Blended Solution Calculator" not found');
-//   }
-//   
-//   // Create timestamp for unique naming
-//   const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HHmmss");
-//   const snapshotName = scenarioName + " - " + timestamp;
-//   
-//   // Copy the sheet
-//   const snapshot = calcSheet.copyTo(ss);
-//   snapshot.setName(snapshotName);
-//   
-//   // Convert all formulas to values (make it static like a screenshot)
-//   const dataRange = snapshot.getDataRange();
-//   const values = dataRange.getValues();
-//   const formulas = dataRange.getFormulas();
-//   
-//   // Replace formulas with their current values
-//   for (let i = 0; i < formulas.length; i++) {
-//     for (let j = 0; j < formulas[i].length; j++) {
-//       if (formulas[i][j]) {
-//         // This cell has a formula, replace it with its value
-//         snapshot.getRange(i + 1, j + 1).setValue(values[i][j]);
-//       }
-//     }
-//   }
-//   
-//   // Move the snapshot to the end
-//   ss.moveActiveSheet(ss.getNumSheets());
-//   
-//   return {
-//     success: true,
-//     sheetName: snapshotName,
-//     timestamp: timestamp
-//   };
-// }
-
-/**
  * Create a full copy of the entire workbook (all sheets)
- * The copy will have all formulas converted to static values
  * All copies go into a folder named with user inputs and timestamp
- * @param {string} scenarioName - Name of the scenario (e.g., "1 - Do Nothing")
+ * @param {number} scenarioNumber - Scenario number (1-5)
  * @param {object} userInputs - User input data for folder naming
  */
-function createWorkbookCopy(scenarioName, userInputs) {
+function createWorkbookCopy(scenarioNumber, userInputs) {
   try {
-    Logger.log('Starting createWorkbookCopy for: ' + scenarioName);
+    Logger.log('Starting createWorkbookCopy for scenario: ' + scenarioNumber);
     Logger.log('User inputs: ' + JSON.stringify(userInputs));
     
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Blended Solution Calculator');
+    
+    if (!sheet) {
+      throw new Error('Sheet "Blended Solution Calculator" not found');
+    }
+    
+    // Read the three values for dynamic naming
+    const b43Value = sheet.getRange('B43').getValue() || 0;
+    const c92Value = sheet.getRange('C92').getValue() || 0;
+    const g47Value = sheet.getRange('G47').getValue() || 0;
+    
+    Logger.log('Values - B43: ' + b43Value + ', C92: ' + c92Value + ', G47: ' + g47Value);
+    
+    // Helper function to format value as $XXXk (rounded to nearest thousand)
+    const formatValue = (value, label) => {
+      const roundedThousands = Math.round(value / 1000);
+      if (roundedThousands > 0) {
+        return `$${roundedThousands}k ${label}`;
+      }
+      return '';
+    };
+    
+    // Build the filename parts
+    const parts = [scenarioNumber + ' -'];
+    
+    const solarPart = formatValue(b43Value, 'Solar');
+    if (solarPart) parts.push(solarPart);
+    
+    const medtechPart = formatValue(c92Value, 'Medtech');
+    if (medtechPart) parts.push(medtechPart);
+    
+    const refundPart = formatValue(g47Value, 'Refund');
+    if (refundPart) parts.push(refundPart);
+    
+    // Join with underscore between value parts
+    let copyName;
+    if (parts.length === 1) {
+      // No values > 0, just use scenario number
+      copyName = scenarioNumber.toString();
+    } else {
+      copyName = parts[0] + ' ' + parts.slice(1).join('_');
+    }
+    
     const originalFile = DriveApp.getFileById(ss.getId());
     // Use specific folder ID instead of parent folder
     const parentFolder = DriveApp.getFolderById('1oAKrZEv2Hrji5lfERWcsrmGmsajueMqW');
@@ -409,8 +398,8 @@ function createWorkbookCopy(scenarioName, userInputs) {
       Logger.log('Created new folder: ' + analysisFolder.getId());
     }
     
-    // Create workbook copy name with full timestamp: "1 - Do Nothing - 2025-10-30_143022"
-    const copyName = `${scenarioName} - ${timestamp}`;
+    // Add timestamp to filename
+    copyName = `${copyName} - ${timestamp}`;
     
     Logger.log('Creating workbook copy: ' + copyName);
     
@@ -575,89 +564,7 @@ function createWorkingCopy(folderId) {
 }
 
 /**
- * Step 3: Save a scenario snapshot from the working copy
- * This copies the current state of the working copy with a scenario name
- * @param {string} workingCopyId - ID of the working copy spreadsheet
- * @param {number} scenarioNumber - Scenario number (1-5)
- * @param {string} folderId - ID of the folder
- * @returns {object} - Snapshot info
- */
-function saveScenarioSnapshot(workingCopyId, scenarioNumber, folderId) {
-  try {
-    Logger.log('Saving scenario snapshot: ' + scenarioNumber);
-    
-    // Open the working copy to read values
-    const workingCopySpreadsheet = SpreadsheetApp.openById(workingCopyId);
-    const sheet = workingCopySpreadsheet.getSheetByName('Blended Solution Calculator');
-    
-    if (!sheet) {
-      throw new Error('Sheet "Blended Solution Calculator" not found in working copy');
-    }
-    
-    // Read the three values
-    const b43Value = sheet.getRange('B43').getValue() || 0;
-    const c92Value = sheet.getRange('C92').getValue() || 0;
-    const g47Value = sheet.getRange('G47').getValue() || 0;
-    
-    Logger.log('Values - B43: ' + b43Value + ', C92: ' + c92Value + ', G47: ' + g47Value);
-    
-    // Helper function to format value as $XXXk (rounded to nearest thousand)
-    const formatValue = (value, label) => {
-      const roundedThousands = Math.round(value / 1000);
-      if (roundedThousands > 0) {
-        return `$${roundedThousands}k ${label}`;
-      }
-      return '';
-    };
-    
-    // Build the filename parts
-    const parts = [scenarioNumber + ' -'];
-    
-    const solarPart = formatValue(b43Value, 'Solar');
-    if (solarPart) parts.push(solarPart);
-    
-    const medtechPart = formatValue(c92Value, 'Medtech');
-    if (medtechPart) parts.push(medtechPart);
-    
-    const refundPart = formatValue(g47Value, 'Refund');
-    if (refundPart) parts.push(refundPart);
-    
-    // Join with underscore between value parts
-    let snapshotName;
-    if (parts.length === 1) {
-      // No values > 0, just use scenario number
-      snapshotName = scenarioNumber.toString();
-    } else {
-      snapshotName = parts[0] + ' ' + parts.slice(1).join('_');
-    }
-    
-    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HHmmss");
-    snapshotName = `${snapshotName} - ${timestamp}`;
-    
-    Logger.log('Creating snapshot with name: ' + snapshotName);
-    
-    // Make a copy of the working copy to preserve this scenario
-    const workingCopyFile = DriveApp.getFileById(workingCopyId);
-    const targetFolder = DriveApp.getFolderById(folderId);
-    const snapshot = workingCopyFile.makeCopy(snapshotName, targetFolder);
-    
-    Logger.log('Snapshot saved: ' + snapshot.getId());
-    
-    return {
-      success: true,
-      snapshotId: snapshot.getId(),
-      snapshotUrl: snapshot.getUrl(),
-      snapshotName: snapshotName
-    };
-  } catch (error) {
-    Logger.log('ERROR in saveScenarioSnapshot: ' + error.toString());
-    Logger.log('Stack: ' + error.stack);
-    throw error;
-  }
-}
-
-/**
- * Step 4: Delete the working copy after all scenarios are complete
+ * Step 3: Delete the working copy after all scenarios are complete
  * @param {string} workingCopyId - ID of the working copy to delete
  * @returns {object} - Success status
  */
