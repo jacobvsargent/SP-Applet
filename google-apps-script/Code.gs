@@ -54,9 +54,9 @@ function doPost(e) {
         break;
       case 'createWorkbookCopy':
         Logger.log('doPost received createWorkbookCopy request');
-        Logger.log('scenarioName: ' + data.scenarioName);
+        Logger.log('scenarioNumber: ' + data.scenarioNumber);
         Logger.log('userInputs: ' + JSON.stringify(data.userInputs));
-        result = createWorkbookCopy(data.scenarioName, data.userInputs);
+        result = createWorkbookCopy(data.scenarioNumber, data.userInputs);
         Logger.log('createWorkbookCopy returned: ' + JSON.stringify(result));
         break;
       case 'createFolder':
