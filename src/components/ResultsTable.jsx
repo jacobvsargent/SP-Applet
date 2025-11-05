@@ -2,7 +2,15 @@ import React from 'react';
 import { formatCurrency } from '../utils/formatting';
 import { SCENARIOS } from '../constants';
 
-export default function ResultsTable({ results, userInputs }) {
+export default function ResultsTable({ results, userInputs, elapsedTime }) {
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins > 0) {
+      return `${mins}m ${secs}s`;
+    }
+    return `${secs}s`;
+  };
   /**
    * Format value - can be single value or range
    */
@@ -133,7 +141,22 @@ export default function ResultsTable({ results, userInputs }) {
 
   return (
     <div>
-      <h2>Analysis Results</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ margin: 0 }}>Analysis Results</h2>
+        {elapsedTime > 0 && (
+          <div style={{
+            background: '#e8f4f8',
+            border: '1px solid #0066cc',
+            borderRadius: '4px',
+            padding: '8px 16px',
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#0066cc'
+          }}>
+            Completed in {formatTime(elapsedTime)}
+          </div>
+        )}
+      </div>
       
       {userInputs && (
         <div style={{

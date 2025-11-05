@@ -20,17 +20,27 @@ export default function App() {
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
   const [lastSubmittedData, setLastSubmittedData] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [startTime, setStartTime] = useState(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   const handleProgressUpdate = (progressValue, message) => {
     setProgress(progressValue);
     setProgressMessage(message);
   };
 
-  const handleFormSubmit = async (formData, scenarioOnly = null) => {
+  const handleFormSubmit = async (formData, scenarioOnly = null, isAutoRetry = false) => {
+    // Only reset retry count if this is a new submission (not an auto-retry)
+    if (!isAutoRetry) {
+      setRetryCount(0);
+      setStartTime(Date.now());
+      setElapsedTime(0);
+    }
+    
     setLastSubmittedData(formData);
     setAppState(APP_STATE.PROCESSING);
     setProgress(0);
-    setProgressMessage('Initializing...');
+    setProgressMessage(isAutoRetry ? 'Retrying analysis...' : 'Initializing...');
     setError(null);
 
     try {
@@ -44,13 +54,30 @@ export default function App() {
         const { runAllScenarios } = await import('./services/googleSheetsService');
         scenarioResults = await runAllScenarios(formData, handleProgressUpdate);
       }
+      
+      // Calculate final elapsed time
+      const finalElapsed = Math.round((Date.now() - startTime) / 1000);
+      setElapsedTime(finalElapsed);
+      
       setResults(scenarioResults);
       setAppState(APP_STATE.RESULTS);
     } catch (err) {
       console.error('Error running analysis:', err);
+      
+      // Auto-retry once if this is the first failure
+      if (retryCount === 0) {
+        console.log('First attempt failed, automatically retrying...');
+        setRetryCount(1);
+        // Wait 2 seconds before retrying
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return handleFormSubmit(formData, scenarioOnly, true);
+      }
+      
+      // If this is the second failure, show error
       setError({
         message: err.message || 'Failed to complete the analysis',
-        details: err.stack
+        details: err.stack,
+        retryAttempted: true
       });
       setAppState(APP_STATE.ERROR);
     }
@@ -62,6 +89,9 @@ export default function App() {
     setError(null);
     setProgress(0);
     setProgressMessage('');
+    setRetryCount(0);
+    setStartTime(null);
+    setElapsedTime(0);
   };
 
   const handleRetry = () => {
@@ -82,7 +112,7 @@ export default function App() {
           </p>
         </div>
         <img 
-          src="/TWP_Logo_Final.png" 
+          src="/SP-Applet/TWP_Logo_Final.png" 
           alt="Taxwise Partners Logo" 
           style={{ height: '80px', marginLeft: '20px' }}
         />
@@ -93,7 +123,7 @@ export default function App() {
       )}
 
       {appState === APP_STATE.PROCESSING && (
-        <ProgressBar progress={progress} message={progressMessage} />
+        <ProgressBar progress={progress} message={progressMessage} startTime={startTime} />
       )}
 
       {appState === APP_STATE.ERROR && (
@@ -102,7 +132,7 @@ export default function App() {
 
       {appState === APP_STATE.RESULTS && results && (
         <>
-          <ResultsTable results={results} userInputs={lastSubmittedData} />
+          <ResultsTable results={results} userInputs={lastSubmittedData} elapsedTime={elapsedTime} />
           <ActionButtons onNewAnalysis={handleNewAnalysis} results={results} userInputs={lastSubmittedData} />
         </>
       )}
