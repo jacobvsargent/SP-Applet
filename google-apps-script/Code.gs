@@ -341,8 +341,9 @@ function createWorkbookCopy(scenarioNumber, userInputs) {
       return '';
     };
     
-    // Build the filename parts
-    const parts = [scenarioNumber + ' -'];
+    // Build the filename parts - start with name
+    const namePart = userInputs.name || 'Unknown';
+    const parts = [namePart, scenarioNumber + ' -'];
     
     const solarPart = formatValue(b43Value, 'Solar');
     if (solarPart) parts.push(solarPart);
@@ -353,13 +354,15 @@ function createWorkbookCopy(scenarioNumber, userInputs) {
     const refundPart = formatValue(g47Value, 'Refund');
     if (refundPart) parts.push(refundPart);
     
-    // Join with underscore between value parts
+    // Join: "Name - Scenario# - value_value_value"
+    // First element is name, second is scenario number, rest are values
     let copyName;
-    if (parts.length === 1) {
-      // No values > 0, just use scenario number
-      copyName = scenarioNumber.toString();
+    if (parts.length === 2) {
+      // No values > 0, just use name and scenario number
+      copyName = `${parts[0]} - ${scenarioNumber}`;
     } else {
-      copyName = parts[0] + ' ' + parts.slice(1).join('_');
+      // Name - Scenario# - values
+      copyName = parts[0] + ' - ' + parts[1] + ' ' + parts.slice(2).join('_');
     }
     
     const originalFile = DriveApp.getFileById(ss.getId());
@@ -380,8 +383,8 @@ function createWorkbookCopy(scenarioNumber, userInputs) {
       return '$' + income;
     };
     
-    // Create folder name with date only: "Analysis - $75k - NC - Single - 2025-10-30"
-    const folderName = `Analysis - ${formatIncome(userInputs.income)} - ${userInputs.state} - ${userInputs.filingStatus} - ${dateOnly}`;
+    // Create folder name with name first: "John Smith - $75k - NC - Single - 2025-10-30"
+    const folderName = `${userInputs.name} - ${formatIncome(userInputs.income)} - ${userInputs.state} - ${userInputs.filingStatus} - ${dateOnly}`;
     
     Logger.log('Looking for/creating folder: ' + folderName);
     
@@ -500,8 +503,8 @@ function createAnalysisFolder(userInputs) {
       return '$' + income;
     };
     
-    // Create folder name: "Analysis - $75k - NC - Single - 2025-10-30"
-    const folderName = `Analysis - ${formatIncome(userInputs.income)} - ${userInputs.state} - ${userInputs.filingStatus} - ${dateOnly}`;
+    // Create folder name with name first: "John Smith - $75k - NC - Single - 2025-10-30"
+    const folderName = `${userInputs.name} - ${formatIncome(userInputs.income)} - ${userInputs.state} - ${userInputs.filingStatus} - ${dateOnly}`;
     
     Logger.log('Looking for/creating folder: ' + folderName);
     

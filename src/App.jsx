@@ -74,10 +74,19 @@ export default function App() {
 
   return (
     <div className="container">
-      <h1>Taxwise Partners Strategic Partner Estimator Tool</h1>
-      <p className="subtitle">
-        Calculate potential net gains across 5 different tax optimization scenarios
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+        <div>
+          <h1>Strategic Partner Estimator Tool</h1>
+          <p className="subtitle">
+            This product is in beta. Please refer to a member of the Taxwise team with any questions or concerns.
+          </p>
+        </div>
+        <img 
+          src="/TWP_Logo_Final.png" 
+          alt="Taxwise Partners Logo" 
+          style={{ height: '80px', marginLeft: '20px' }}
+        />
+      </div>
 
       {appState === APP_STATE.INPUT && (
         <InputForm onSubmit={handleFormSubmit} />

@@ -143,7 +143,7 @@ export default function ResultsTable({ results, userInputs }) {
           padding: '16px',
           marginBottom: '20px'
         }}>
-          <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '16px' }}>Your Inputs</h3>
+          <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '16px' }}>Analysis for: {userInputs.name}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', fontSize: '14px' }}>
             <div>
               <strong>Annual Income:</strong> {formatCurrency(userInputs.income)}

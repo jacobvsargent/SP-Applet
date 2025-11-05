@@ -4,6 +4,7 @@ import { isValidCurrency, parseCurrency } from '../utils/formatting';
 
 export default function InputForm({ onSubmit }) {
   const [formData, setFormData] = useState({
+    name: '',
     income: '',
     avgIncome: '',
     state: '',
@@ -16,6 +17,12 @@ export default function InputForm({ onSubmit }) {
 
   const validateField = (name, value) => {
     switch (name) {
+      case 'name':
+        if (!value || value.trim() === '') {
+          return 'This field is required';
+        }
+        return '';
+      
       case 'income':
       case 'avgIncome':
         if (!value || value.trim() === '') {
@@ -91,6 +98,7 @@ export default function InputForm({ onSubmit }) {
     
     // Mark all fields as touched
     setTouched({
+      name: true,
       income: true,
       avgIncome: true,
       state: true,
@@ -100,6 +108,7 @@ export default function InputForm({ onSubmit }) {
     if (validateForm()) {
       // Parse currency values before submitting
       const submissionData = {
+        name: formData.name.trim(),
         income: parseCurrency(formData.income),
         avgIncome: parseCurrency(formData.avgIncome),
         state: formData.state,
@@ -112,7 +121,7 @@ export default function InputForm({ onSubmit }) {
 
   const isFormValid = () => {
     // Check only the required fields (not the checkbox)
-    const requiredFields = ['income', 'avgIncome', 'state', 'filingStatus'];
+    const requiredFields = ['name', 'income', 'avgIncome', 'state', 'filingStatus'];
     return requiredFields.every(key => {
       const value = formData[key];
       return value && value !== '' && !validateField(key, value);
@@ -121,6 +130,23 @@ export default function InputForm({ onSubmit }) {
 
   return (
     <form onSubmit={handleSubmit}>
+      <div className="form-group">
+        <label htmlFor="name">Name</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder="e.g., John Smith"
+          className={errors.name && touched.name ? 'error' : ''}
+        />
+        {errors.name && touched.name && (
+          <div className="error-message">{errors.name}</div>
+        )}
+      </div>
+
       <div className="form-group">
         <label htmlFor="income">Annual Income</label>
         <input
@@ -233,6 +259,7 @@ export default function InputForm({ onSubmit }) {
           e.preventDefault();
           if (isFormValid()) {
             const submissionData = {
+              name: formData.name.trim(),
               income: parseCurrency(formData.income),
               avgIncome: parseCurrency(formData.avgIncome),
               state: formData.state,
