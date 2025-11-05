@@ -23,6 +23,7 @@ export default function App() {
   const [retryCount, setRetryCount] = useState(0);
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const startTimeRef = React.useRef(null);
 
   const handleProgressUpdate = (progressValue, message) => {
     setProgress(progressValue);
@@ -33,7 +34,9 @@ export default function App() {
     // Only reset retry count if this is a new submission (not an auto-retry)
     if (!isAutoRetry) {
       setRetryCount(0);
-      setStartTime(Date.now());
+      const now = Date.now();
+      setStartTime(now);
+      startTimeRef.current = now;
       setElapsedTime(0);
     }
     
@@ -55,8 +58,8 @@ export default function App() {
         scenarioResults = await runAllScenarios(formData, handleProgressUpdate);
       }
       
-      // Calculate final elapsed time
-      const finalElapsed = Math.round((Date.now() - startTime) / 1000);
+      // Calculate final elapsed time using ref to ensure we have the correct start time
+      const finalElapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
       setElapsedTime(finalElapsed);
       
       setResults(scenarioResults);
@@ -91,6 +94,7 @@ export default function App() {
     setProgressMessage('');
     setRetryCount(0);
     setStartTime(null);
+    startTimeRef.current = null;
     setElapsedTime(0);
   };
 
