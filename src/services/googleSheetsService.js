@@ -251,340 +251,215 @@ export async function cleanup() {
 }
 
 /**
- * Run Scenario 1: Do Nothing (Baseline)
- * @param {object} userInputs - User input data
- * @param {function} onProgress - Progress callback
- * @param {string} workingCopyId - Optional working copy ID
- * @param {string} folderId - Optional folder ID (unused, kept for compatibility)
- * @returns {Promise<object>} - Scenario results
+ * LOCAL STORAGE HELPERS FOR AUTO-RESUME FUNCTIONALITY
  */
-export async function runScenario1(userInputs, onProgress, workingCopyId = null, folderId = null) {
-  onProgress(10, 'Setting up baseline scenario...');
+
+const STORAGE_KEY = 'sp_applet_analysis_state';
+
+/**
+ * Save completed scenario to localStorage
+ * @param {string} analysisId - Unique ID for this analysis run
+ * @param {number} scenarioNumber - Scenario number (1-5)
+ * @param {string} part - 'full', 'max', or 'min'
+ * @param {object} result - Scenario result data
+ */
+function saveCompletedScenario(analysisId, scenarioNumber, part, result) {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const state = stored ? JSON.parse(stored) : {};
+    
+    if (!state[analysisId]) {
+      state[analysisId] = { completed: {}, timestamp: Date.now() };
+    }
+    
+    const key = `scenario${scenarioNumber}_${part}`;
+    state[analysisId].completed[key] = result;
+    state[analysisId].timestamp = Date.now();
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    console.log(`✅ Saved ${key} to localStorage`);
+  } catch (error) {
+    console.warn('Failed to save scenario to localStorage:', error);
+  }
+}
+
+/**
+ * Get completed scenarios from localStorage
+ * @param {string} analysisId - Unique ID for this analysis run
+ * @returns {object} - Object with completed scenario data
+ */
+function getCompletedScenarios(analysisId) {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return {};
+    
+    const state = JSON.parse(stored);
+    if (!state[analysisId]) return {};
+    
+    // Check if state is recent (within 1 hour)
+    const age = Date.now() - state[analysisId].timestamp;
+    if (age > 3600000) { // 1 hour in milliseconds
+      console.log('Stored analysis state is too old, discarding');
+      clearAnalysisState(analysisId);
+      return {};
+    }
+    
+    return state[analysisId].completed || {};
+  } catch (error) {
+    console.warn('Failed to read scenarios from localStorage:', error);
+    return {};
+  }
+}
+
+/**
+ * Clear analysis state from localStorage
+ * @param {string} analysisId - Unique ID for this analysis run
+ */
+function clearAnalysisState(analysisId) {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return;
+    
+    const state = JSON.parse(stored);
+    delete state[analysisId];
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    console.log(`🗑️ Cleared analysis state for ${analysisId}`);
+  } catch (error) {
+    console.warn('Failed to clear analysis state:', error);
+  }
+}
+
+/**
+ * Generate unique analysis ID based on user inputs
+ * @param {object} userInputs - User input data
+ * @returns {string} - Unique ID
+ */
+function generateAnalysisId(userInputs) {
+  return `${userInputs.name}_${userInputs.income}_${userInputs.state}_${userInputs.filingStatus}`.replace(/\s+/g, '_');
+}
+
+/**
+ * CENTRAL SCENARIO RUNNER
+ * This function handles all scenario configurations
+ * 
+ * @param {object} params - Scenario parameters
+ * @param {object} params.userInputs - User input data
+ * @param {function} params.onProgress - Progress callback
+ * @param {string} params.workingCopyId - Working copy ID
+ * @param {string} params.folderId - Folder ID (unused, for compatibility)
+ * @param {number} params.scenarioNumber - Scenario number (1-5) for workbook naming
+ * @param {boolean} params.solarBoolean - Whether solar is included
+ * @param {number} params.solarCoordinationFee - Solar coordination fee (writes to E17)
+ * @param {string} params.donationType - 'medtech', 'land', or 'none'
+ * @param {boolean} params.getRefund - Whether to get refund (uses solveForITCRefund vs solveForITC)
+ * @param {string} params.progressMessage - Message to show during progress
+ * @returns {Promise<object>} - Scenario outputs
+ */
+async function runScenario({
+  userInputs,
+  onProgress,
+  workingCopyId,
+  folderId = null,
+  scenarioNumber,
+  solarBoolean,
+  solarCoordinationFee,
+  donationType,
+  getRefund,
+  progressMessage
+}) {
+  // Clean up previous scenario values
+  await cleanupLimited();
+  await wait(WAIT_TIME * 2);
   
-  // Set E17 to 0 (no solar for this scenario)
-  await setValue('E17', 0, workingCopyId);
+  if (progressMessage) {
+    onProgress(null, progressMessage);
+  }
   
-  // Set user inputs
-  await setUserInputs(userInputs, workingCopyId);
+  // Set E17 (solar coordination fee)
+  await setValue('E17', solarCoordinationFee, workingCopyId);
   
-  onProgress(15, 'Capturing baseline results...');
+  // Handle donation setup
+  if (donationType === 'none') {
+    // No donation - set C92 to 0
+    await setValue('C92', 0, workingCopyId);
+  } else {
+    // Donation exists - set formula and configure based on type
+    await writeFormula('C92', '=MAX(0, B92)', workingCopyId);
+    
+    if (donationType === 'medtech') {
+      // 60% donation
+      await setValue('C90', 0.6, workingCopyId);
+      await setValue('C88', 5, workingCopyId);
+      await writeFormula('G88', '=MIN(L100, F88)', workingCopyId);
+    } else if (donationType === 'land') {
+      // 30% donation
+      await setValue('C90', 0.3, workingCopyId);
+      await setValue('C88', 4.55, workingCopyId);
+      await setValue('G88', 0, workingCopyId);
+    }
+  }
+  
+  // If scenario 1 (baseline), set user inputs
+  if (scenarioNumber === 1) {
+    await setUserInputs(userInputs, workingCopyId);
+  }
+  
+  // Handle solar scenarios
+  if (solarBoolean && donationType === 'none') {
+    // Solar only (no donation) - Scenario 2
+    await writeFormula('F47', '=F51', workingCopyId);
+    await callFunction('solveForITC', workingCopyId);
+  } else if (solarBoolean && donationType !== 'none') {
+    // Solar + Donation scenarios (4 or 5)
+    if (getRefund) {
+      // Scenario 5: With Refund
+      await writeFormula('F47', '=F51', workingCopyId);
+      await callFunction('solveForITCRefund', workingCopyId);
+      
+      // Check if F51 is negative
+      const f51Value = await getValue('F51', workingCopyId);
+      
+      if (f51Value < 0) {
+        await setValue('F47', 0, workingCopyId);
+        await callFunction('solveForITCRefund', workingCopyId);
+      } else {
+        await writeFormula('F47', '=F51', workingCopyId);
+        await callFunction('solveForITCRefund', workingCopyId);
+      }
+      
+      // Get value from G49 and write it to G47
+      const g49Value = await getValue('G49', workingCopyId);
+      await setValue('G47', g49Value, workingCopyId);
+    } else {
+      // Scenario 4: No Refund
+      await writeFormula('F47', '=F51', workingCopyId);
+      await callFunction('solveForITC', workingCopyId);
+      
+      // Check if F51 is negative
+      const f51Value = await getValue('F51', workingCopyId);
+      
+      if (f51Value < 0) {
+        await setValue('F47', 0, workingCopyId);
+        await callFunction('solveForITC', workingCopyId);
+      } else {
+        await writeFormula('F47', '=F51', workingCopyId);
+      }
+    }
+  } else if (!solarBoolean && donationType !== 'none') {
+    // Donation only (no solar) - Scenario 3
+    // Clear solar-related cells
+    await setValue('B43', 0, workingCopyId);
+    await setValue('F47', 0, workingCopyId);
+  }
   
   // Get outputs
   const outputs = await getOutputs(workingCopyId);
   
-  // Create a full workbook copy for this scenario
-  await createWorkbookCopy(1, userInputs);
+  // Create workbook copy
+  await createWorkbookCopy(scenarioNumber, userInputs);
   
   return outputs;
-}
-
-/**
- * Run Scenario 2: Solar Only
- * @param {object} userInputs - User input data
- * @param {function} onProgress - Progress callback
- * @param {string} workingCopyId - Optional working copy ID
- * @param {string} folderId - Optional folder ID (unused, kept for compatibility)
- * @returns {Promise<object>} - Scenario results
- */
-export async function runScenario2(userInputs, onProgress, workingCopyId = null, folderId = null) {
-  onProgress(20, 'Running Solar Only scenario...');
-  
-  // Set E17 to 1950 (solar system size)
-  await setValue('E17', 1950, workingCopyId);
-  
-  // Write formula in F47
-  await writeFormula('F47', '=F51', workingCopyId);
-  
-  // Call solveForITC
-  await callFunction('solveForITC', workingCopyId);
-  
-  onProgress(30, 'Capturing Solar Only results...');
-  
-  // Get outputs
-  const outputs = await getOutputs(workingCopyId);
-  
-  // Create a full workbook copy for this scenario
-  await createWorkbookCopy(2, userInputs);
-  
-  return outputs;
-}
-
-/**
- * Run Scenario 3: Donation Only (RANGE)
- * @param {object} userInputs - User input data
- * @param {function} onProgress - Progress callback
- * @returns {Promise<object>} - Scenario results with min and max
- */
-export async function runScenario3(userInputs, onProgress, workingCopyId = null, folderId = null) {
-  // Clean up previous scenario values
-  await cleanupLimited();
-  await wait(WAIT_TIME * 2);
-  
-  onProgress(35, 'Running Donation Only scenario (Maximum - Medtech)...');
-  
-  // Set E17 to 0 (no solar for this scenario)
-  await setValue('E17', 0, workingCopyId);
-  
-  // Set B43 to 0 (transition from Solar Only to Donation Only)
-  await setValue('B43', 0, workingCopyId);
-  
-  // Set F47 to 0
-  await setValue('F47', 0, workingCopyId);
-  
-  // Write formula in C92
-  await writeFormula('C92', '=MAX(0, B92)', workingCopyId);
-  
-  // Ensure C90 = 60% (Medtech)
-  await setValue('C90', 0.6, workingCopyId);
-  
-  // Set C88 and G88 for 60% scenario (Medtech)
-  await setValue('C88', 5, workingCopyId);
-  await writeFormula('G88', '=MIN(L100, F88)', workingCopyId);
-  
-  onProgress(42, 'Capturing Donation Only maximum (Medtech)...');
-  
-  // Get outputs for MAX
-  const maxOutputs = await getOutputs(workingCopyId);
-  
-  // Create a full workbook copy for this scenario (60% - Medtech)
-  await createWorkbookCopy(3, userInputs);
-  
-  // Check if we should skip the minimum calculation
-  if (userInputs.skipScenario5Min) {
-    // Return only max values (use same values for min to avoid display issues)
-    return {
-      max: maxOutputs,
-      min: maxOutputs
-    };
-  }
-  
-  onProgress(50, 'Running Donation Only scenario (Minimum - Land)...');
-  
-  // Set C90 = 30% (Land)
-  await setValue('C90', 0.3, workingCopyId);
-  
-  // Set C88 and G88 for 30% scenario (Land)
-  await setValue('C88', 4.55, workingCopyId);
-  await setValue('G88', 0, workingCopyId);
-  
-  onProgress(53, 'Capturing Donation Only minimum (Land)...');
-  
-  // Get outputs for MIN
-  const minOutputs = await getOutputs(workingCopyId);
-  
-  // Create a full workbook copy for minimum scenario (30% - Land)
-  await createWorkbookCopy(3, userInputs);
-  
-  // Reset C90 to 60% for next scenario
-  await setValue('C90', 0.6, workingCopyId);
-  
-  return {
-    max: maxOutputs,
-    min: minOutputs
-  };
-}
-
-/**
- * Run Scenario 4: Solar + Donation (No Refund) - RANGE
- * @param {object} userInputs - User input data
- * @param {function} onProgress - Progress callback
- * @param {string} workingCopyId - Optional working copy ID
- * @param {string} folderId - Optional folder ID (unused, kept for compatibility)
- * @returns {Promise<object>} - Scenario results with min and max
- */
-export async function runScenario4(userInputs, onProgress, workingCopyId = null, folderId = null) {
-  // Clean up previous scenario values
-  await cleanupLimited();
-  await wait(WAIT_TIME * 2);
-  
-  onProgress(55, 'Running Solar + Donation (No Refund) - Maximum (Medtech)...');
-  
-  // Set E17 to 1950 (solar system size)
-  await setValue('E17', 1950, workingCopyId);
-  
-  // Step 1: Do donation part first
-  await writeFormula('C92', '=MAX(0, B92)', workingCopyId);
-  await setValue('C90', 0.6, workingCopyId);
-  
-  // Set C88 and G88 for 60% scenario (Medtech)
-  await setValue('C88', 5, workingCopyId);
-  await writeFormula('G88', '=MIN(L100, F88)', workingCopyId);
-  
-  // Step 2: Call solveForITC
-  await writeFormula('F47', '=F51', workingCopyId);
-  await callFunction('solveForITC', workingCopyId);
-  
-  // Step 3: Check if F51 is negative
-  const f51Value = await getValue('F51', workingCopyId);
-  
-  if (f51Value < 0) {
-    // If negative, set F47 to 0
-    await setValue('F47', 0, workingCopyId);
-    // Run solve function again
-    await callFunction('solveForITC', workingCopyId);
-  } else {
-    // Otherwise, F47 should equal F51
-    await writeFormula('F47', '=F51', workingCopyId);
-  }
-  
-  onProgress(62, 'Capturing Solar + Donation (No Refund) maximum (Medtech)...');
-  
-  // Get outputs for MAX
-  const maxOutputs = await getOutputs(workingCopyId);
-  
-  // Create a full workbook copy for this scenario (60% - Medtech)
-  await createWorkbookCopy(4, userInputs);
-  
-  // Check if we should skip the minimum calculation
-  if (userInputs.skipScenario5Min) {
-    // Return only max values (use same values for min to avoid display issues)
-    return {
-      max: maxOutputs,
-      min: maxOutputs
-    };
-  }
-  
-  onProgress(70, 'Running Solar + Donation (No Refund) - Minimum (Land)...');
-  
-  // Set C90 = 30% (Land)
-  await setValue('C90', 0.3, workingCopyId);
-  
-  // Set C88 and G88 for 30% scenario (Land)
-  await setValue('C88', 4.55, workingCopyId);
-  await setValue('G88', 0, workingCopyId);
-  
-  // Check F51 again for minimum
-  const f51ValueMin = await getValue('F51', workingCopyId);
-  
-  if (f51ValueMin < 0) {
-    await setValue('F47', 0, workingCopyId);
-    await callFunction('solveForITC', workingCopyId);
-  } else {
-    await writeFormula('F47', '=F51', workingCopyId);
-    await callFunction('solveForITC', workingCopyId);
-  }
-  
-  onProgress(73, 'Capturing Solar + Donation (No Refund) minimum (Land)...');
-  
-  // Get outputs for MIN
-  const minOutputs = await getOutputs(workingCopyId);
-  
-  // Create a full workbook copy for minimum scenario (30% - Land)
-  await createWorkbookCopy(4, userInputs);
-  
-  // Reset C90 to 60% for next scenario
-  await setValue('C90', 0.6, workingCopyId);
-  
-  return {
-    max: maxOutputs,
-    min: minOutputs
-  };
-}
-
-/**
- * Run Scenario 5: Solar + Donation (With Refund) - RANGE
- * @param {object} userInputs - User input data
- * @param {function} onProgress - Progress callback
- * @returns {Promise<object>} - Scenario results with min and max
- */
-export async function runScenario5(userInputs, onProgress, workingCopyId = null, folderId = null) {
-  // Clean up previous scenario values
-  await cleanupLimited();
-  await wait(WAIT_TIME * 2);
-  
-  onProgress(75, 'Running Solar + Donation (With Refund) - Maximum (Medtech)...');
-  
-  // Set E17 to 1950 (solar system size)
-  await setValue('E17', 1950, workingCopyId);
-  
-  // Step 1: Do donation part first
-  await writeFormula('C92', '=MAX(0, B92)', workingCopyId);
-  await setValue('C90', 0.6, workingCopyId);
-  
-  // Set C88 and G88 for 60% scenario (Medtech)
-  await setValue('C88', 5, workingCopyId);
-  await writeFormula('G88', '=MIN(L100, F88)', workingCopyId);
-  
-  // Step 2: Call solveForITCRefund
-  await writeFormula('F47', '=F51', workingCopyId);
-  await callFunction('solveForITCRefund', workingCopyId);
-  
-  // Step 3: Check if F51 is negative
-  const f51Value = await getValue('F51', workingCopyId);
-  
-  if (f51Value < 0) {
-    // If negative, set F47 to 0
-    await setValue('F47', 0, workingCopyId);
-    // Run solve function again
-    await callFunction('solveForITCRefund', workingCopyId);
-  } else {
-    // Otherwise, F47 should equal F51 (note: for refund scenario, using F47 not G47)
-    await writeFormula('F47', '=F51', workingCopyId);
-    await callFunction('solveForITCRefund', workingCopyId);
-  }
-  
-  // Get value from G49 and write it to G47
-  const g49Value = await getValue('G49', workingCopyId);
-  await setValue('G47', g49Value, workingCopyId);
-  
-  onProgress(82, 'Capturing Solar + Donation (With Refund) maximum (Medtech)...');
-  
-  
-  // Get outputs for MAX
-  const maxOutputs = await getOutputs(workingCopyId);
-  
-  // Create a full workbook copy for this scenario (60% - Medtech)
-  await createWorkbookCopy(5, userInputs);
-  
-  // Check if we should skip the minimum calculation
-  if (userInputs.skipScenario5Min) {
-    // Return only max values (use same values for min to avoid display issues)
-    return {
-      max: maxOutputs,
-      min: maxOutputs
-    };
-  }
-  
-  onProgress(90, 'Running Solar + Donation (With Refund) - Minimum (Land)...');
-  
-  // Zero out G47
-  await writeFormula('G47', '0', workingCopyId);
-  // Set C90 = 30% (Land)
-  await setValue('C90', 0.3, workingCopyId);
-  
-  // Set C88 and G88 for 30% scenario (Land)
-  await setValue('C88', 4.55, workingCopyId);
-  await setValue('G88', 0, workingCopyId);
-  
-  // Check F51 again for minimum
-  const f51ValueMin = await getValue('F51', workingCopyId);
-  
-  if (f51ValueMin < 0) {
-    await setValue('F47', 0, workingCopyId);
-    await callFunction('solveForITCRefund', workingCopyId);
-  } else {
-    await writeFormula('F47', '=F51', workingCopyId);
-  }
- 
-  // Get value from G49 and write it to G47
-  const g49ValueMin = await getValue('G49', workingCopyId);
-  await setValue('G47', g49ValueMin, workingCopyId);
-  
-  onProgress(93, 'Capturing Solar + Donation (With Refund) minimum (Land)...');
-  
-  // Get outputs for MIN
-  const minOutputs = await getOutputs(workingCopyId);
-  
-  // Create a full workbook copy for minimum scenario (30% - Land)
-  await createWorkbookCopy(5, userInputs);
-  
-  // Reset C90 to 60% for any future scenarios
-  await setValue('C90', 0.6, workingCopyId);
-  
-  return {
-    max: maxOutputs,
-    min: minOutputs
-  };
 }
 
 /**
@@ -594,10 +469,15 @@ export async function runScenario5(userInputs, onProgress, workingCopyId = null,
  * @returns {Promise<object>} - Scenario 5 results formatted as full results
  */
 export async function runScenario5Only(userInputs, onProgress) {
+  const analysisId = generateAnalysisId(userInputs);
   let workingCopyId = null;
   
   try {
     onProgress(0, 'Setting up your analysis...');
+    
+    // Check for completed scenarios
+    const completed = getCompletedScenarios(analysisId);
+    console.log('📦 Checking for completed scenarios:', completed);
     
     // Step 1: Create folder
     onProgress(2, 'Creating analysis folder...');
@@ -613,17 +493,84 @@ export async function runScenario5Only(userInputs, onProgress) {
     onProgress(8, 'Preparing working copy...');
     await cleanupLimited();
     
-    // Step 4: Always run Scenario 1 (Do Nothing) first for baseline
-    onProgress(10, 'Running Scenario 1: Baseline...');
-    const scenario1 = await runScenario1(userInputs, onProgress, workingCopyId, folderId);
+    // Step 4: Run Scenario 1 (Baseline) if not completed
+    let scenario1;
+    if (completed.scenario1_full) {
+      console.log('✅ Using cached Scenario 1');
+      scenario1 = completed.scenario1_full;
+      onProgress(10, 'Using cached Scenario 1: Baseline...');
+    } else {
+      onProgress(10, 'Running Scenario 1: Baseline...');
+      scenario1 = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 1,
+        solarBoolean: false,
+        solarCoordinationFee: 0,
+        donationType: 'none',
+        getRefund: false,
+        progressMessage: 'Capturing baseline results...'
+      });
+      saveCompletedScenario(analysisId, 1, 'full', scenario1);
+    }
     
-    // Step 4: Run Scenario 5
-    onProgress(50, 'Running Solar + Donation (With Refund)...');
-    const scenario5 = await runScenario5(userInputs, onProgress, workingCopyId, folderId);
+    // Step 5: Run Scenario 5
+    let scenario5 = {};
     
-    // Step 5: Delete working copy
+    // Run Scenario 5 Max (60% - Medtech) if not completed
+    if (completed.scenario5_max) {
+      console.log('✅ Using cached Scenario 5 Max');
+      scenario5.max = completed.scenario5_max;
+      onProgress(50, 'Using cached Scenario 5 Max...');
+    } else {
+      onProgress(50, 'Running Solar + Donation (With Refund) - Maximum (Medtech)...');
+      scenario5.max = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 5,
+        solarBoolean: true,
+        solarCoordinationFee: 1950,
+        donationType: 'medtech',
+        getRefund: true,
+        progressMessage: 'Capturing Solar + Donation (With Refund) maximum (Medtech)...'
+      });
+      saveCompletedScenario(analysisId, 5, 'max', scenario5.max);
+    }
+    
+    // Run Scenario 5 Min (30% - Land) if not skipped and not completed
+    if (userInputs.skipScenario5Min) {
+      scenario5.min = scenario5.max;
+    } else if (completed.scenario5_min) {
+      console.log('✅ Using cached Scenario 5 Min');
+      scenario5.min = completed.scenario5_min;
+      onProgress(80, 'Using cached Scenario 5 Min...');
+    } else {
+      onProgress(80, 'Running Solar + Donation (With Refund) - Minimum (Land)...');
+      scenario5.min = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 5,
+        solarBoolean: true,
+        solarCoordinationFee: 1950,
+        donationType: 'land',
+        getRefund: true,
+        progressMessage: 'Capturing Solar + Donation (With Refund) minimum (Land)...'
+      });
+      saveCompletedScenario(analysisId, 5, 'min', scenario5.min);
+    }
+    
+    // Step 6: Delete working copy
     onProgress(96, 'Cleaning up...');
     await deleteWorkingCopy(workingCopyId);
+    
+    // Clear localStorage after successful completion
+    clearAnalysisState(analysisId);
     
     onProgress(100, 'Analysis complete!');
     
@@ -637,6 +584,9 @@ export async function runScenario5Only(userInputs, onProgress) {
     };
   } catch (error) {
     console.error('Error running scenario 5:', error);
+    // Keep completed scenarios in localStorage for resume
+    console.log('💾 Keeping completed scenarios in localStorage for resume');
+    
     // Try to clean up working copy if it was created
     if (workingCopyId) {
       try {
@@ -656,10 +606,18 @@ export async function runScenario5Only(userInputs, onProgress) {
  * @returns {Promise<object>} - All scenario results
  */
 export async function runAllScenarios(userInputs, onProgress) {
+  const analysisId = generateAnalysisId(userInputs);
   let workingCopyId = null;
   
   try {
     onProgress(0, 'Setting up your analysis...');
+    
+    // Check for completed scenarios
+    const completed = getCompletedScenarios(analysisId);
+    if (Object.keys(completed).length > 0) {
+      console.log('🔄 Resuming from previous run. Completed scenarios:', Object.keys(completed));
+      onProgress(0, '🔄 Resuming from previous run...');
+    }
     
     // Step 1: Create folder
     onProgress(2, 'Creating analysis folder...');
@@ -675,30 +633,205 @@ export async function runAllScenarios(userInputs, onProgress) {
     onProgress(8, 'Preparing working copy...');
     await cleanupLimited();
     
-    // Step 4: Run all scenarios on the working copy
-    // Scenario 1: Do Nothing
-    onProgress(10, 'Running Scenario 1: Baseline...');
-    const scenario1 = await runScenario1(userInputs, onProgress, workingCopyId, folderId);
+    // SCENARIO 1: Do Nothing (Baseline)
+    let scenario1;
+    if (completed.scenario1_full) {
+      console.log('✅ Using cached Scenario 1');
+      scenario1 = completed.scenario1_full;
+      onProgress(10, 'Using cached Scenario 1: Baseline...');
+    } else {
+      onProgress(10, 'Running Scenario 1: Baseline...');
+      scenario1 = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 1,
+        solarBoolean: false,
+        solarCoordinationFee: 0,
+        donationType: 'none',
+        getRefund: false,
+        progressMessage: 'Capturing baseline results...'
+      });
+      saveCompletedScenario(analysisId, 1, 'full', scenario1);
+    }
     
-    // Scenario 2: Solar Only
-    onProgress(20, 'Running Scenario 2: Solar Only...');
-    const scenario2 = await runScenario2(userInputs, onProgress, workingCopyId, folderId);
+    // SCENARIO 2: Solar Only
+    let scenario2;
+    if (completed.scenario2_full) {
+      console.log('✅ Using cached Scenario 2');
+      scenario2 = completed.scenario2_full;
+      onProgress(20, 'Using cached Scenario 2: Solar Only...');
+    } else {
+      onProgress(20, 'Running Scenario 2: Solar Only...');
+      scenario2 = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 2,
+        solarBoolean: true,
+        solarCoordinationFee: 1950,
+        donationType: 'none',
+        getRefund: false,
+        progressMessage: 'Capturing Solar Only results...'
+      });
+      saveCompletedScenario(analysisId, 2, 'full', scenario2);
+    }
     
-    // Scenario 3: Donation Only
-    onProgress(35, 'Running Scenario 3: Donation Only...');
-    const scenario3 = await runScenario3(userInputs, onProgress, workingCopyId, folderId);
+    // SCENARIO 3: Donation Only (RANGE)
+    let scenario3 = {};
     
-    // Scenario 4: Solar + Donation (No Refund)
-    onProgress(55, 'Running Scenario 4: Solar + Donation (No Refund)...');
-    const scenario4 = await runScenario4(userInputs, onProgress, workingCopyId, folderId);
+    // Scenario 3 Max (60% - Medtech)
+    if (completed.scenario3_max) {
+      console.log('✅ Using cached Scenario 3 Max');
+      scenario3.max = completed.scenario3_max;
+      onProgress(35, 'Using cached Scenario 3 Max...');
+    } else {
+      onProgress(35, 'Running Donation Only scenario (Maximum - Medtech)...');
+      scenario3.max = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 3,
+        solarBoolean: false,
+        solarCoordinationFee: 0,
+        donationType: 'medtech',
+        getRefund: false,
+        progressMessage: 'Capturing Donation Only maximum (Medtech)...'
+      });
+      saveCompletedScenario(analysisId, 3, 'max', scenario3.max);
+    }
     
-    // Scenario 5: Solar + Donation (With Refund)
-    onProgress(75, 'Running Scenario 5: Solar + Donation (With Refund)...');
-    const scenario5 = await runScenario5(userInputs, onProgress, workingCopyId, folderId);
+    // Scenario 3 Min (30% - Land)
+    if (userInputs.skipScenario5Min) {
+      scenario3.min = scenario3.max;
+    } else if (completed.scenario3_min) {
+      console.log('✅ Using cached Scenario 3 Min');
+      scenario3.min = completed.scenario3_min;
+      onProgress(50, 'Using cached Scenario 3 Min...');
+    } else {
+      onProgress(50, 'Running Donation Only scenario (Minimum - Land)...');
+      scenario3.min = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 3,
+        solarBoolean: false,
+        solarCoordinationFee: 0,
+        donationType: 'land',
+        getRefund: false,
+        progressMessage: 'Capturing Donation Only minimum (Land)...'
+      });
+      saveCompletedScenario(analysisId, 3, 'min', scenario3.min);
+    }
+    
+    // SCENARIO 4: Solar + Donation (No Refund) - RANGE
+    let scenario4 = {};
+    
+    // Scenario 4 Max (60% - Medtech)
+    if (completed.scenario4_max) {
+      console.log('✅ Using cached Scenario 4 Max');
+      scenario4.max = completed.scenario4_max;
+      onProgress(55, 'Using cached Scenario 4 Max...');
+    } else {
+      onProgress(55, 'Running Solar + Donation (No Refund) - Maximum (Medtech)...');
+      scenario4.max = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 4,
+        solarBoolean: true,
+        solarCoordinationFee: 1950,
+        donationType: 'medtech',
+        getRefund: false,
+        progressMessage: 'Capturing Solar + Donation (No Refund) maximum (Medtech)...'
+      });
+      saveCompletedScenario(analysisId, 4, 'max', scenario4.max);
+    }
+    
+    // Scenario 4 Min (30% - Land)
+    if (userInputs.skipScenario5Min) {
+      scenario4.min = scenario4.max;
+    } else if (completed.scenario4_min) {
+      console.log('✅ Using cached Scenario 4 Min');
+      scenario4.min = completed.scenario4_min;
+      onProgress(70, 'Using cached Scenario 4 Min...');
+    } else {
+      onProgress(70, 'Running Solar + Donation (No Refund) - Minimum (Land)...');
+      scenario4.min = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 4,
+        solarBoolean: true,
+        solarCoordinationFee: 1950,
+        donationType: 'land',
+        getRefund: false,
+        progressMessage: 'Capturing Solar + Donation (No Refund) minimum (Land)...'
+      });
+      saveCompletedScenario(analysisId, 4, 'min', scenario4.min);
+    }
+    
+    // SCENARIO 5: Solar + Donation (With Refund) - RANGE
+    let scenario5 = {};
+    
+    // Scenario 5 Max (60% - Medtech)
+    if (completed.scenario5_max) {
+      console.log('✅ Using cached Scenario 5 Max');
+      scenario5.max = completed.scenario5_max;
+      onProgress(75, 'Using cached Scenario 5 Max...');
+    } else {
+      onProgress(75, 'Running Solar + Donation (With Refund) - Maximum (Medtech)...');
+      scenario5.max = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 5,
+        solarBoolean: true,
+        solarCoordinationFee: 1950,
+        donationType: 'medtech',
+        getRefund: true,
+        progressMessage: 'Capturing Solar + Donation (With Refund) maximum (Medtech)...'
+      });
+      saveCompletedScenario(analysisId, 5, 'max', scenario5.max);
+    }
+    
+    // Scenario 5 Min (30% - Land)
+    if (userInputs.skipScenario5Min) {
+      scenario5.min = scenario5.max;
+    } else if (completed.scenario5_min) {
+      console.log('✅ Using cached Scenario 5 Min');
+      scenario5.min = completed.scenario5_min;
+      onProgress(90, 'Using cached Scenario 5 Min...');
+    } else {
+      onProgress(90, 'Running Solar + Donation (With Refund) - Minimum (Land)...');
+      scenario5.min = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 5,
+        solarBoolean: true,
+        solarCoordinationFee: 1950,
+        donationType: 'land',
+        getRefund: true,
+        progressMessage: 'Capturing Solar + Donation (With Refund) minimum (Land)...'
+      });
+      saveCompletedScenario(analysisId, 5, 'min', scenario5.min);
+    }
     
     // Step 4: Delete working copy
     onProgress(96, 'Cleaning up...');
     await deleteWorkingCopy(workingCopyId);
+    
+    // Clear localStorage after successful completion
+    clearAnalysisState(analysisId);
     
     onProgress(100, 'Analysis complete!');
     
@@ -711,6 +844,9 @@ export async function runAllScenarios(userInputs, onProgress) {
     };
   } catch (error) {
     console.error('Error running scenarios:', error);
+    // Keep completed scenarios in localStorage for resume
+    console.log('💾 Keeping completed scenarios in localStorage for resume');
+    
     // Try to clean up working copy if it was created
     if (workingCopyId) {
       try {
