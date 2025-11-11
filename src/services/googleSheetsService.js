@@ -489,9 +489,11 @@ export async function runScenario5Only(userInputs, onProgress) {
     const workingCopyInfo = await createWorkingCopy(folderId);
     workingCopyId = workingCopyInfo.workingCopyId;
     
-    // Step 3: Clean up once at the start (working copy is fresh)
+    // Step 3: Clean up the working copy and set user inputs
     onProgress(8, 'Preparing working copy...');
-    await cleanupLimited();
+    await cleanup();  // Full cleanup to clear any residual data
+    await setUserInputs(userInputs, workingCopyId);  // Set correct user inputs
+    await cleanupLimited();  // Limited cleanup before scenarios
     
     // Step 4: Run Scenario 1 (Baseline) if not completed
     let scenario1;
@@ -565,10 +567,6 @@ export async function runScenario5Only(userInputs, onProgress) {
       saveCompletedScenario(analysisId, 5, 'min', scenario5.min);
     }
     
-    // Step 6: Delete working copy
-    onProgress(96, 'Cleaning up...');
-    await deleteWorkingCopy(workingCopyId);
-    
     // Clear localStorage after successful completion
     clearAnalysisState(analysisId);
     
@@ -586,15 +584,6 @@ export async function runScenario5Only(userInputs, onProgress) {
     console.error('Error running scenario 5:', error);
     // Keep completed scenarios in localStorage for resume
     console.log('💾 Keeping completed scenarios in localStorage for resume');
-    
-    // Try to clean up working copy if it was created
-    if (workingCopyId) {
-      try {
-        await deleteWorkingCopy(workingCopyId);
-      } catch (cleanupError) {
-        console.error('Error cleaning up working copy:', cleanupError);
-      }
-    }
     throw error;
   }
 }
@@ -629,9 +618,11 @@ export async function runAllScenarios(userInputs, onProgress) {
     const workingCopyInfo = await createWorkingCopy(folderId);
     workingCopyId = workingCopyInfo.workingCopyId;
     
-    // Step 3: Clean up once at the start (working copy is fresh)
+    // Step 3: Clean up the working copy and set user inputs
     onProgress(8, 'Preparing working copy...');
-    await cleanupLimited();
+    await cleanup();  // Full cleanup to clear any residual data
+    await setUserInputs(userInputs, workingCopyId);  // Set correct user inputs
+    await cleanupLimited();  // Limited cleanup before scenarios
     
     // SCENARIO 1: Do Nothing (Baseline)
     let scenario1;
@@ -826,10 +817,6 @@ export async function runAllScenarios(userInputs, onProgress) {
       saveCompletedScenario(analysisId, 5, 'min', scenario5.min);
     }
     
-    // Step 4: Delete working copy
-    onProgress(96, 'Cleaning up...');
-    await deleteWorkingCopy(workingCopyId);
-    
     // Clear localStorage after successful completion
     clearAnalysisState(analysisId);
     
@@ -846,15 +833,6 @@ export async function runAllScenarios(userInputs, onProgress) {
     console.error('Error running scenarios:', error);
     // Keep completed scenarios in localStorage for resume
     console.log('💾 Keeping completed scenarios in localStorage for resume');
-    
-    // Try to clean up working copy if it was created
-    if (workingCopyId) {
-      try {
-        await deleteWorkingCopy(workingCopyId);
-      } catch (cleanupError) {
-        console.error('Error cleaning up working copy:', cleanupError);
-      }
-    }
     throw error;
   }
 }

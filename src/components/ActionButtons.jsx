@@ -106,6 +106,11 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
     window.open('https://taxwisecrm.mytimelogportal.com/forms/tax-reduction-increased-profit', '_blank');
   };
 
+  const handleNewAnalysisClick = () => {
+    // Refresh the page to ensure clean state
+    window.location.reload();
+  };
+
   return (
     <div className="action-buttons">
       <button 
@@ -124,7 +129,7 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
       
       <button 
         className="btn-success"
-        onClick={onNewAnalysis}
+        onClick={handleNewAnalysisClick}
       >
         Start a New Analysis
       </button>
