@@ -8,7 +8,7 @@ const SCRIPT_URL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL;
 // This controls how long to wait between operations for sheet calculations to settle
 // Increase if calculations are showing $0 or incorrect values
 // Decrease if analysis is taking too long and values are correct
-const WAIT_TIME = 50; // 0.05 seconds wait time between operations (reduced for performance)
+const WAIT_TIME = 100; // 0.1 seconds wait time between operations
 
 /**
  * Helper function to wait/delay execution
@@ -316,7 +316,11 @@ export async function runScenario2(userInputs, onProgress, workingCopyId = null,
  * @returns {Promise<object>} - Scenario results with min and max
  */
 export async function runScenario3(userInputs, onProgress, workingCopyId = null, folderId = null) {
-  onProgress(35, 'Running Donation Only scenario (Maximum)...');
+  // Clean up previous scenario values
+  await cleanupLimited();
+  await wait(WAIT_TIME * 2);
+  
+  onProgress(35, 'Running Donation Only scenario (Maximum - Medtech)...');
   
   // Set E17 to 0 (no solar for this scenario)
   await setValue('E17', 0, workingCopyId);
@@ -330,15 +334,19 @@ export async function runScenario3(userInputs, onProgress, workingCopyId = null,
   // Write formula in C92
   await writeFormula('C92', '=MAX(0, B92)', workingCopyId);
   
-  // Ensure C90 = 60%
+  // Ensure C90 = 60% (Medtech)
   await setValue('C90', 0.6, workingCopyId);
   
-  onProgress(42, 'Capturing Donation Only maximum...');
+  // Set C88 and G88 for 60% scenario (Medtech)
+  await setValue('C88', 5, workingCopyId);
+  await writeFormula('G88', '=MIN(L100, F88)', workingCopyId);
+  
+  onProgress(42, 'Capturing Donation Only maximum (Medtech)...');
   
   // Get outputs for MAX
   const maxOutputs = await getOutputs(workingCopyId);
   
-  // Create a full workbook copy for this scenario
+  // Create a full workbook copy for this scenario (60% - Medtech)
   await createWorkbookCopy(3, userInputs);
   
   // Check if we should skip the minimum calculation
@@ -350,15 +358,22 @@ export async function runScenario3(userInputs, onProgress, workingCopyId = null,
     };
   }
   
-  onProgress(50, 'Running Donation Only scenario (Minimum)...');
+  onProgress(50, 'Running Donation Only scenario (Minimum - Land)...');
   
-  // Set C90 = 30%
+  // Set C90 = 30% (Land)
   await setValue('C90', 0.3, workingCopyId);
   
-  onProgress(53, 'Capturing Donation Only minimum...');
+  // Set C88 and G88 for 30% scenario (Land)
+  await setValue('C88', 4.55, workingCopyId);
+  await setValue('G88', 0, workingCopyId);
+  
+  onProgress(53, 'Capturing Donation Only minimum (Land)...');
   
   // Get outputs for MIN
   const minOutputs = await getOutputs(workingCopyId);
+  
+  // Create a full workbook copy for minimum scenario (30% - Land)
+  await createWorkbookCopy(3, userInputs);
   
   // Reset C90 to 60% for next scenario
   await setValue('C90', 0.6, workingCopyId);
@@ -378,7 +393,11 @@ export async function runScenario3(userInputs, onProgress, workingCopyId = null,
  * @returns {Promise<object>} - Scenario results with min and max
  */
 export async function runScenario4(userInputs, onProgress, workingCopyId = null, folderId = null) {
-  onProgress(55, 'Running Solar + Donation (No Refund) - Maximum...');
+  // Clean up previous scenario values
+  await cleanupLimited();
+  await wait(WAIT_TIME * 2);
+  
+  onProgress(55, 'Running Solar + Donation (No Refund) - Maximum (Medtech)...');
   
   // Set E17 to 1950 (solar system size)
   await setValue('E17', 1950, workingCopyId);
@@ -386,6 +405,10 @@ export async function runScenario4(userInputs, onProgress, workingCopyId = null,
   // Step 1: Do donation part first
   await writeFormula('C92', '=MAX(0, B92)', workingCopyId);
   await setValue('C90', 0.6, workingCopyId);
+  
+  // Set C88 and G88 for 60% scenario (Medtech)
+  await setValue('C88', 5, workingCopyId);
+  await writeFormula('G88', '=MIN(L100, F88)', workingCopyId);
   
   // Step 2: Call solveForITC
   await writeFormula('F47', '=F51', workingCopyId);
@@ -404,12 +427,12 @@ export async function runScenario4(userInputs, onProgress, workingCopyId = null,
     await writeFormula('F47', '=F51', workingCopyId);
   }
   
-  onProgress(62, 'Capturing Solar + Donation (No Refund) maximum...');
+  onProgress(62, 'Capturing Solar + Donation (No Refund) maximum (Medtech)...');
   
   // Get outputs for MAX
   const maxOutputs = await getOutputs(workingCopyId);
   
-  // Create a full workbook copy for this scenario
+  // Create a full workbook copy for this scenario (60% - Medtech)
   await createWorkbookCopy(4, userInputs);
   
   // Check if we should skip the minimum calculation
@@ -421,10 +444,14 @@ export async function runScenario4(userInputs, onProgress, workingCopyId = null,
     };
   }
   
-  onProgress(70, 'Running Solar + Donation (No Refund) - Minimum...');
+  onProgress(70, 'Running Solar + Donation (No Refund) - Minimum (Land)...');
   
-  // Set C90 = 30%
+  // Set C90 = 30% (Land)
   await setValue('C90', 0.3, workingCopyId);
+  
+  // Set C88 and G88 for 30% scenario (Land)
+  await setValue('C88', 4.55, workingCopyId);
+  await setValue('G88', 0, workingCopyId);
   
   // Check F51 again for minimum
   const f51ValueMin = await getValue('F51', workingCopyId);
@@ -437,10 +464,13 @@ export async function runScenario4(userInputs, onProgress, workingCopyId = null,
     await callFunction('solveForITC', workingCopyId);
   }
   
-  onProgress(73, 'Capturing Solar + Donation (No Refund) minimum...');
+  onProgress(73, 'Capturing Solar + Donation (No Refund) minimum (Land)...');
   
   // Get outputs for MIN
   const minOutputs = await getOutputs(workingCopyId);
+  
+  // Create a full workbook copy for minimum scenario (30% - Land)
+  await createWorkbookCopy(4, userInputs);
   
   // Reset C90 to 60% for next scenario
   await setValue('C90', 0.6, workingCopyId);
@@ -458,7 +488,11 @@ export async function runScenario4(userInputs, onProgress, workingCopyId = null,
  * @returns {Promise<object>} - Scenario results with min and max
  */
 export async function runScenario5(userInputs, onProgress, workingCopyId = null, folderId = null) {
-  onProgress(75, 'Running Solar + Donation (With Refund) - Maximum...');
+  // Clean up previous scenario values
+  await cleanupLimited();
+  await wait(WAIT_TIME * 2);
+  
+  onProgress(75, 'Running Solar + Donation (With Refund) - Maximum (Medtech)...');
   
   // Set E17 to 1950 (solar system size)
   await setValue('E17', 1950, workingCopyId);
@@ -466,6 +500,10 @@ export async function runScenario5(userInputs, onProgress, workingCopyId = null,
   // Step 1: Do donation part first
   await writeFormula('C92', '=MAX(0, B92)', workingCopyId);
   await setValue('C90', 0.6, workingCopyId);
+  
+  // Set C88 and G88 for 60% scenario (Medtech)
+  await setValue('C88', 5, workingCopyId);
+  await writeFormula('G88', '=MIN(L100, F88)', workingCopyId);
   
   // Step 2: Call solveForITCRefund
   await writeFormula('F47', '=F51', workingCopyId);
@@ -489,13 +527,13 @@ export async function runScenario5(userInputs, onProgress, workingCopyId = null,
   const g49Value = await getValue('G49', workingCopyId);
   await setValue('G47', g49Value, workingCopyId);
   
-  onProgress(82, 'Capturing Solar + Donation (With Refund) maximum...');
+  onProgress(82, 'Capturing Solar + Donation (With Refund) maximum (Medtech)...');
   
   
   // Get outputs for MAX
   const maxOutputs = await getOutputs(workingCopyId);
   
-  // Create a full workbook copy for this scenario
+  // Create a full workbook copy for this scenario (60% - Medtech)
   await createWorkbookCopy(5, userInputs);
   
   // Check if we should skip the minimum calculation
@@ -507,12 +545,16 @@ export async function runScenario5(userInputs, onProgress, workingCopyId = null,
     };
   }
   
-  onProgress(90, 'Running Solar + Donation (With Refund) - Minimum...');
+  onProgress(90, 'Running Solar + Donation (With Refund) - Minimum (Land)...');
   
   // Zero out G47
   await writeFormula('G47', '0', workingCopyId);
-  // Set C90 = 30%
+  // Set C90 = 30% (Land)
   await setValue('C90', 0.3, workingCopyId);
+  
+  // Set C88 and G88 for 30% scenario (Land)
+  await setValue('C88', 4.55, workingCopyId);
+  await setValue('G88', 0, workingCopyId);
   
   // Check F51 again for minimum
   const f51ValueMin = await getValue('F51', workingCopyId);
@@ -528,10 +570,13 @@ export async function runScenario5(userInputs, onProgress, workingCopyId = null,
   const g49ValueMin = await getValue('G49', workingCopyId);
   await setValue('G47', g49ValueMin, workingCopyId);
   
-  onProgress(93, 'Capturing Solar + Donation (With Refund) minimum...');
+  onProgress(93, 'Capturing Solar + Donation (With Refund) minimum (Land)...');
   
   // Get outputs for MIN
   const minOutputs = await getOutputs(workingCopyId);
+  
+  // Create a full workbook copy for minimum scenario (30% - Land)
+  await createWorkbookCopy(5, userInputs);
   
   // Reset C90 to 60% for any future scenarios
   await setValue('C90', 0.6, workingCopyId);

@@ -13,18 +13,12 @@ A professional web application that analyzes tax optimization scenarios involvin
 
 ## 🚀 Quick Start
 
-Get up and running in 5 minutes! See [QUICKSTART.md](QUICKSTART.md) for the fastest path to success.
+See [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) for detailed technical documentation including libraries, architecture, and complete information flow.
 
 ## 📖 Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)** - 5-minute setup guide
-- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Comprehensive setup instructions
-- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Complete testing procedures
-- **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** - Production deployment guide
-- **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Architecture documentation
-- **[WORKFLOW_DIAGRAM.md](WORKFLOW_DIAGRAM.md)** - Visual flow diagrams
-- **[BUILD_SUMMARY.md](BUILD_SUMMARY.md)** - Complete build overview
-- **[google-apps-script/README.md](google-apps-script/README.md)** - Backend setup
+- **[TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md)** - Complete technical documentation with architecture and information flow
+- **[google-apps-script/README.md](google-apps-script/README.md)** - Backend deployment instructions
 
 ## 🛠️ Installation
 
@@ -79,7 +73,7 @@ Use these test cases to verify functionality:
 - State: `DC`
 - Filing Status: `Single`
 
-See [TESTING_GUIDE.md](TESTING_GUIDE.md) for comprehensive testing procedures.
+See [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) for detailed architecture and scenario logic.
 
 ## 📊 How It Works
 
@@ -129,7 +123,8 @@ vercel
 - Drag and drop `dist` folder
 
 **GitHub Pages**
-- See [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)
+- Configure base path in `vite.config.js`
+- Build and deploy `dist` folder
 
 ## 🎨 Customization
 
@@ -154,7 +149,7 @@ SP Applet/
 └── Configuration files          # package.json, vite.config.js, etc.
 ```
 
-See [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) for detailed architecture.
+See [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) for detailed architecture and file structure.
 
 ## 🔒 Security Notes
 
@@ -176,7 +171,7 @@ For production use with sensitive data, consider adding authentication.
 | $0 results | Check cell references in Apps Script match your sheet |
 | CORS errors | Ensure Web App deployed with "Anyone" access |
 
-See [TESTING_GUIDE.md](TESTING_GUIDE.md) for detailed troubleshooting.
+See [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) for architecture details and troubleshooting guidance.
 
 ## 📞 Support
 
@@ -194,10 +189,11 @@ This project is built for TaxWise Partners tax optimization analysis.
 This is a complete, production-ready application. All features implemented, tested, and documented.
 
 **Next Steps:**
-1. Follow [QUICKSTART.md](QUICKSTART.md) to get running
+1. Configure environment variables
 2. Test with sample data
-3. Deploy using [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)
-4. Share with users!
+3. Build for production with `npm run build`
+4. Deploy to your hosting platform
+5. Share with users!
 
 ---
 
