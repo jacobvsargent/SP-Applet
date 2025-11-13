@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { US_STATES, FILING_STATUS, FILING_STATUS_LABELS } from '../constants';
-import { isValidCurrency, parseCurrency } from '../utils/formatting';
+import { isValidCurrency, parseCurrency, formatCurrencyInput } from '../utils/formatting';
 
 export default function InputForm({ onSubmit }) {
   const [formData, setFormData] = useState({
@@ -79,6 +79,16 @@ export default function InputForm({ onSubmit }) {
       ...prev,
       [name]: error
     }));
+
+    // Format currency fields
+    if ((name === 'income' || name === 'avgIncome') && value && isValidCurrency(value)) {
+      const numericValue = parseCurrency(value);
+      const formatted = formatCurrencyInput(numericValue);
+      setFormData(prev => ({
+        ...prev,
+        [name]: formatted
+      }));
+    }
   };
 
   const validateForm = () => {

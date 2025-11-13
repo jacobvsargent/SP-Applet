@@ -20,6 +20,27 @@ export function formatCurrency(value) {
 }
 
 /**
+ * Format a number as currency with 2 decimal places for input display
+ * @param {number} value - The numeric value to format
+ * @returns {string} - Formatted currency string (e.g., "$123,456.00")
+ */
+export function formatCurrencyInput(value) {
+  if (value === null || value === undefined || isNaN(value)) {
+    return '';
+  }
+  
+  const absValue = Math.abs(value);
+  const formatted = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(absValue);
+  
+  return value < 0 ? `-${formatted}` : formatted;
+}
+
+/**
  * Parse currency string or number string to a number
  * Handles formats like "$1,234,420" or "1234420"
  * @param {string} value - The string to parse
