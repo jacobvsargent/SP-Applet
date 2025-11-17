@@ -85,7 +85,7 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
     },
     {
       scenario: SCENARIOS.DONATION_ONLY,
-      data: results.scenario3 ? {
+      data: (results.scenario3 && results.scenario3.min && results.scenario3.max) ? {
         agi: {
           min: results.scenario3.min.agi,
           max: results.scenario3.max.agi
@@ -102,7 +102,7 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
     },
     {
       scenario: SCENARIOS.SOLAR_DONATION_NO_REFUND,
-      data: results.scenario4 ? {
+      data: (results.scenario4 && results.scenario4.min && results.scenario4.max) ? {
         agi: {
           min: results.scenario4.min.agi,
           max: results.scenario4.max.agi
@@ -119,7 +119,7 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
     },
     {
       scenario: SCENARIOS.SOLAR_DONATION_WITH_REFUND,
-      data: results.scenario5 ? {
+      data: (results.scenario5 && results.scenario5.min && results.scenario5.max) ? {
         agi: {
           min: results.scenario5.min.agi,
           max: results.scenario5.max.agi
@@ -136,7 +136,7 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
     },
     {
       scenario: 'DONATION + CTB',
-      data: results.scenario6 ? {
+      data: (results.scenario6 && results.scenario6.min && results.scenario6.max) ? {
         agi: {
           min: results.scenario6.min.agi,
           max: results.scenario6.max.agi
