@@ -257,7 +257,7 @@ export default function InputForm({ onSubmit }) {
         className="btn-primary"
         disabled={!isFormValid()}
       >
-        Run Full Analysis (All Scenarios)
+        Run Full Analysis (Solar + Donation)
       </button>
 
       <button 
@@ -281,6 +281,29 @@ export default function InputForm({ onSubmit }) {
         }}
       >
         Run Scenario 5 Only (Maximum Savings Only)
+      </button>
+
+      <button 
+        type="button"
+        className="btn-secondary"
+        style={{ width: '100%', marginTop: '10px', backgroundColor: '#6c757d' }}
+        disabled={!isFormValid()}
+        onClick={(e) => {
+          e.preventDefault();
+          if (isFormValid()) {
+            const submissionData = {
+              name: formData.name.trim(),
+              income: parseCurrency(formData.income),
+              avgIncome: parseCurrency(formData.avgIncome),
+              state: formData.state,
+              filingStatus: formData.filingStatus,
+              skipScenario5Min: formData.skipScenario5Min
+            };
+            onSubmit(submissionData, 6);
+          }
+        }}
+      >
+        Run Donation + CTB Only
       </button>
 
       <div className="disclaimer">

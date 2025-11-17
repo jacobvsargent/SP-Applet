@@ -329,8 +329,9 @@ function createWorkbookCopy(scenarioNumber, userInputs) {
     const b43Value = sheet.getRange('B43').getValue() || 0;
     const c92Value = sheet.getRange('C92').getValue() || 0;
     const g47Value = sheet.getRange('G47').getValue() || 0;
+    const c90Value = sheet.getRange('C90').getValue() || 0;
     
-    Logger.log('Values - B43: ' + b43Value + ', C92: ' + c92Value + ', G47: ' + g47Value);
+    Logger.log('Values - B43: ' + b43Value + ', C92: ' + c92Value + ', G47: ' + g47Value + ', C90: ' + c90Value);
     
     // Helper function to format value as $XXXk (rounded to nearest thousand)
     const formatValue = (value, label) => {
@@ -341,6 +342,11 @@ function createWorkbookCopy(scenarioNumber, userInputs) {
       return '';
     };
     
+    // Determine donation type based on C90 value
+    // C90 = 0.3 (30%) => Land, C90 = 0.6 (60%) => Medtech
+    const donationType = (c90Value <= 0.35) ? 'Land' : 'Medtech';
+    Logger.log('Donation type: ' + donationType + ' (C90 = ' + c90Value + ')');
+    
     // Build the filename parts - start with name
     const namePart = userInputs.name || 'Unknown';
     const parts = [namePart, scenarioNumber + ' -'];
@@ -348,8 +354,8 @@ function createWorkbookCopy(scenarioNumber, userInputs) {
     const solarPart = formatValue(b43Value, 'Solar');
     if (solarPart) parts.push(solarPart);
     
-    const medtechPart = formatValue(c92Value, 'Medtech');
-    if (medtechPart) parts.push(medtechPart);
+    const donationPart = formatValue(c92Value, donationType);
+    if (donationPart) parts.push(donationPart);
     
     const refundPart = formatValue(g47Value, 'Refund');
     if (refundPart) parts.push(refundPart);

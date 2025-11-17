@@ -86,6 +86,19 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
       body += `   Net Gain: ${formatValue(s5Data.totalNetGain)}\n\n`;
     }
     
+    if (results.scenario6) {
+      const s6 = results.scenario6;
+      const s6Data = {
+        agi: { min: s6.min.agi, max: s6.max.agi },
+        totalTaxDue: { min: s6.min.totalTaxDue, max: s6.max.totalTaxDue },
+        totalNetGain: { min: s6.min.totalNetGain, max: s6.max.totalNetGain }
+      };
+      body += `6. DONATION + CTB\n`;
+      body += `   Taxable Income: ${formatValue(s6Data.agi)}\n`;
+      body += `   Total Tax Due: ${formatValue(s6Data.totalTaxDue)}\n`;
+      body += `   Net Gain: ${formatValue(s6Data.totalNetGain)}\n\n`;
+    }
+    
     body += '\n---\n';
     body += 'For a detailed custom analysis, start the Taxwise Partners Intake Form:\n';
     body += 'https://taxwisecrm.mytimelogportal.com/forms/tax-reduction-increased-profit';

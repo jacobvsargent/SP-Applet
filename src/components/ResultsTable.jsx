@@ -73,7 +73,7 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
     return numValue > 0 ? 'value-positive' : numValue < 0 ? 'value-negative' : 'value-neutral';
   };
 
-  // Filter out null scenarios (for when only scenario 5 is run)
+  // Filter out null scenarios (for when only scenario 5 or 6 is run)
   const allRows = [
     {
       scenario: SCENARIOS.DO_NOTHING,
@@ -131,6 +131,23 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
         totalNetGain: {
           min: results.scenario5.min.totalNetGain,
           max: results.scenario5.max.totalNetGain
+        }
+      } : null
+    },
+    {
+      scenario: 'DONATION + CTB',
+      data: results.scenario6 ? {
+        agi: {
+          min: results.scenario6.min.agi,
+          max: results.scenario6.max.agi
+        },
+        totalTaxDue: {
+          min: results.scenario6.min.totalTaxDue,
+          max: results.scenario6.max.totalTaxDue
+        },
+        totalNetGain: {
+          min: results.scenario6.min.totalNetGain,
+          max: results.scenario6.max.totalNetGain
         }
       } : null
     }

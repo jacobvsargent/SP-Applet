@@ -589,6 +589,211 @@ export async function runScenario5Only(userInputs, onProgress) {
 }
 
 /**
+ * Run Scenario 6 only (Donation + CTB) - Runs scenarios 1, 3, and 6
+ * @param {object} userInputs - User input data
+ * @param {function} onProgress - Progress callback
+ * @returns {Promise<object>} - Scenarios 1, 3, and 6 results formatted for display
+ */
+export async function runScenario6Only(userInputs, onProgress) {
+  const analysisId = generateAnalysisId(userInputs) + '_scenario6';
+  let workingCopyId = null;
+  
+  try {
+    onProgress(0, 'Setting up your analysis...');
+    
+    // Check for completed scenarios
+    const completed = getCompletedScenarios(analysisId);
+    console.log('📦 Checking for completed scenarios:', completed);
+    
+    // Step 1: Create folder
+    onProgress(2, 'Creating analysis folder...');
+    const folderInfo = await createAnalysisFolder(userInputs);
+    const folderId = folderInfo.folderId;
+    
+    // Step 2: Create working copy
+    onProgress(5, 'Creating working copy...');
+    const workingCopyInfo = await createWorkingCopy(folderId);
+    workingCopyId = workingCopyInfo.workingCopyId;
+    
+    // Step 3: Clean up the working copy and set user inputs
+    onProgress(8, 'Preparing working copy...');
+    await cleanup();  // Full cleanup to clear any residual data
+    await setUserInputs(userInputs, workingCopyId);  // Set correct user inputs
+    await cleanupLimited();  // Limited cleanup before scenarios
+    
+    // Step 4: Run Scenario 1 (Baseline) if not completed
+    let scenario1;
+    if (completed.scenario1_full) {
+      console.log('✅ Using cached Scenario 1');
+      scenario1 = completed.scenario1_full;
+      onProgress(10, 'Using cached Scenario 1: Baseline...');
+    } else {
+      onProgress(10, 'Running Scenario 1: Baseline...');
+      scenario1 = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 1,
+        solarBoolean: false,
+        solarCoordinationFee: 0,
+        donationType: 'none',
+        getRefund: false,
+        progressMessage: 'Capturing baseline results...'
+      });
+      saveCompletedScenario(analysisId, 1, 'full', scenario1);
+    }
+    
+    // Step 5: Run Scenario 3 (Donation Only) - RANGE
+    let scenario3 = {};
+    
+    // Scenario 3 Max (60% - Medtech)
+    if (completed.scenario3_max) {
+      console.log('✅ Using cached Scenario 3 Max');
+      scenario3.max = completed.scenario3_max;
+      onProgress(30, 'Using cached Scenario 3 Max...');
+    } else {
+      onProgress(30, 'Running Donation Only scenario (Maximum - Medtech)...');
+      scenario3.max = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 3,
+        solarBoolean: false,
+        solarCoordinationFee: 0,
+        donationType: 'medtech',
+        getRefund: false,
+        progressMessage: 'Capturing Donation Only maximum (Medtech)...'
+      });
+      saveCompletedScenario(analysisId, 3, 'max', scenario3.max);
+    }
+    
+    // Scenario 3 Min (30% - Land)
+    if (userInputs.skipScenario5Min) {
+      scenario3.min = scenario3.max;
+    } else if (completed.scenario3_min) {
+      console.log('✅ Using cached Scenario 3 Min');
+      scenario3.min = completed.scenario3_min;
+      onProgress(50, 'Using cached Scenario 3 Min...');
+    } else {
+      onProgress(50, 'Running Donation Only scenario (Minimum - Land)...');
+      scenario3.min = await runScenario({
+        userInputs,
+        onProgress,
+        workingCopyId,
+        folderId,
+        scenarioNumber: 3,
+        solarBoolean: false,
+        solarCoordinationFee: 0,
+        donationType: 'land',
+        getRefund: false,
+        progressMessage: 'Capturing Donation Only minimum (Land)...'
+      });
+      saveCompletedScenario(analysisId, 3, 'min', scenario3.min);
+    }
+    
+    // Step 6: Run Scenario 6 (Donation + CTB)
+    let scenario6 = {};
+    
+    // Run Scenario 6 Max (60% - Medtech) if not completed
+    if (completed.scenario6_max) {
+      console.log('✅ Using cached Scenario 6 Max');
+      scenario6.max = completed.scenario6_max;
+      onProgress(70, 'Using cached Scenario 6 Max...');
+    } else {
+      onProgress(70, 'Running Donation + CTB - Maximum (Medtech)...');
+      
+      // Clean up before running
+      await cleanupLimited();
+      await wait(WAIT_TIME * 2);
+      
+      // Set E17 (no solar coordination fee)
+      await setValue('E17', 0, workingCopyId);
+      
+      // Set donation configuration for 60% (Medtech)
+      await writeFormula('C92', '=MAX(0, B92)', workingCopyId);
+      await setValue('C90', 0.6, workingCopyId);
+      await setValue('C88', 5, workingCopyId);
+      await writeFormula('G88', '=MIN(L100, F88)', workingCopyId);
+      
+      // Clear solar-related cells
+      await setValue('B43', 0, workingCopyId);
+      await setValue('F47', 0, workingCopyId);
+      
+      // Apply CTB setting: J124 = I124 (formula)
+      await writeFormula('J124', '=I124', workingCopyId);
+      
+      // Get outputs
+      const outputs = await getOutputs(workingCopyId);
+      
+      // Create workbook copy
+      await createWorkbookCopy(6, userInputs);
+      
+      scenario6.max = outputs;
+      saveCompletedScenario(analysisId, 6, 'max', scenario6.max);
+    }
+    
+    // Run Scenario 6 Min (30% - Land) if not skipped and not completed
+    if (userInputs.skipScenario5Min) {
+      scenario6.min = scenario6.max;
+    } else if (completed.scenario6_min) {
+      console.log('✅ Using cached Scenario 6 Min');
+      scenario6.min = completed.scenario6_min;
+      onProgress(90, 'Using cached Scenario 6 Min...');
+    } else {
+      onProgress(90, 'Running Donation + CTB - Minimum (Land)...');
+      
+      // Clean up before running
+      await cleanupLimited();
+      await wait(WAIT_TIME * 2);
+      
+      // Set E17 (no solar coordination fee)
+      await setValue('E17', 0, workingCopyId);
+      
+      // Set donation configuration for 30% (Land)
+      await writeFormula('C92', '=MAX(0, B92)', workingCopyId);
+      await setValue('C90', 0.3, workingCopyId);
+      await setValue('C88', 4.55, workingCopyId);
+      await setValue('G88', 0, workingCopyId);
+      
+      // Clear solar-related cells
+      await setValue('B43', 0, workingCopyId);
+      await setValue('F47', 0, workingCopyId);
+      
+      // Apply CTB setting: J124 = I124 (formula)
+      await writeFormula('J124', '=I124', workingCopyId);
+      
+      // Get outputs
+      const outputs = await getOutputs(workingCopyId);
+      
+      // Create workbook copy
+      await createWorkbookCopy(6, userInputs);
+      
+      scenario6.min = outputs;
+      saveCompletedScenario(analysisId, 6, 'min', scenario6.min);
+    }
+    
+    // Clear localStorage after successful completion
+    clearAnalysisState(analysisId);
+    
+    onProgress(100, 'Analysis complete!');
+    
+    // Return with scenario1, scenario3, and scenario6 populated
+    return {
+      scenario1,
+      scenario3,
+      scenario6
+    };
+  } catch (error) {
+    console.error('Error running scenario 6:', error);
+    // Keep completed scenarios in localStorage for resume
+    console.log('💾 Keeping completed scenarios in localStorage for resume');
+    throw error;
+  }
+}
+
+/**
  * Run all scenarios
  * @param {object} userInputs - User input data
  * @param {function} onProgress - Progress callback

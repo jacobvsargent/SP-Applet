@@ -52,6 +52,10 @@ export default function App() {
         // Run only Scenario 5
         const { runScenario5Only } = await import('./services/googleSheetsService');
         scenarioResults = await runScenario5Only(formData, handleProgressUpdate);
+      } else if (scenarioOnly === 6) {
+        // Run only Scenario 6 (Donation + CTB)
+        const { runScenario6Only } = await import('./services/googleSheetsService');
+        scenarioResults = await runScenario6Only(formData, handleProgressUpdate);
       } else {
         // Run all scenarios
         const { runAllScenarios } = await import('./services/googleSheetsService');
