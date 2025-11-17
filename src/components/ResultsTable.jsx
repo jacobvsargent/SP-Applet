@@ -138,8 +138,8 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
       scenario: 'Donation + CTB',
       data: (results.scenario6 && results.scenario6.min && results.scenario6.max) ? {
         agi: {
-          min: results.scenario6.min.agi,
-          max: results.scenario6.max.agi
+          min: 0,
+          max: 0
         },
         totalTaxDue: {
           min: results.scenario6.min.totalTaxDue,
