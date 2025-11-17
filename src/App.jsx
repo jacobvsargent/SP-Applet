@@ -66,6 +66,15 @@ export default function App() {
       const finalElapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
       setElapsedTime(finalElapsed);
       
+      // Debug logging
+      console.log('📊 Scenario Results:', scenarioResults);
+      if (scenarioResults.scenario3) {
+        console.log('📊 Scenario 3 structure:', scenarioResults.scenario3);
+      }
+      if (scenarioResults.scenario6) {
+        console.log('📊 Scenario 6 structure:', scenarioResults.scenario6);
+      }
+      
       setResults(scenarioResults);
       setAppState(APP_STATE.RESULTS);
     } catch (err) {

@@ -86,7 +86,7 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
       body += `   Net Gain: ${formatValue(s5Data.totalNetGain)}\n\n`;
     }
     
-    if (results.scenario6) {
+    if (results.scenario6 && results.scenario6.min && results.scenario6.max) {
       const s6 = results.scenario6;
       const s6Data = {
         agi: { min: s6.min.agi, max: s6.max.agi },

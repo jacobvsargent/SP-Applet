@@ -229,6 +229,11 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
         <tbody>
           {rows.map((row, index) => {
             const isDoNothing = row.scenario === SCENARIOS.DO_NOTHING;
+            // Safety check - ensure row.data exists and has required properties
+            if (!row.data || !row.data.agi || !row.data.totalTaxDue || row.data.totalNetGain === undefined) {
+              console.warn('Invalid row data:', row);
+              return null;
+            }
             return (
               <tr key={index}>
                 <td className="scenario-name">{row.scenario}</td>
