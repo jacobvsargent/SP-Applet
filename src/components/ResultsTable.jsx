@@ -135,7 +135,7 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
       } : null
     },
     {
-      scenario: 'DONATION + CTB',
+      scenario: 'Donation + CTB',
       data: (results.scenario6 && results.scenario6.min && results.scenario6.max) ? {
         agi: {
           min: results.scenario6.min.agi,
