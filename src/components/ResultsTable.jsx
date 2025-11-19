@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { formatCurrency } from '../utils/formatting';
 import { SCENARIOS } from '../constants';
 
 export default function ResultsTable({ results, userInputs, elapsedTime }) {
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -77,11 +79,13 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
   const allRows = [
     {
       scenario: SCENARIOS.DO_NOTHING,
-      data: results.scenario1
+      data: results.scenario1,
+      fileName: results.scenario1?.fileName
     },
     {
       scenario: SCENARIOS.SOLAR_ONLY,
-      data: results.scenario2
+      data: results.scenario2,
+      fileName: results.scenario2?.fileName
     },
     {
       scenario: SCENARIOS.DONATION_ONLY,
@@ -98,7 +102,8 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
           min: results.scenario3.min.totalNetGain,
           max: results.scenario3.max.totalNetGain
         }
-      } : null
+      } : null,
+      fileName: results.scenario3?.max?.fileName  // Using max for now as instructed
     },
     {
       scenario: SCENARIOS.SOLAR_DONATION_NO_REFUND,
@@ -115,7 +120,8 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
           min: results.scenario4.min.totalNetGain,
           max: results.scenario4.max.totalNetGain
         }
-      } : null
+      } : null,
+      fileName: results.scenario4?.max?.fileName
     },
     {
       scenario: SCENARIOS.SOLAR_DONATION_WITH_REFUND,
@@ -132,7 +138,8 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
           min: results.scenario5.min.totalNetGain,
           max: results.scenario5.max.totalNetGain
         }
-      } : null
+      } : null,
+      fileName: results.scenario5?.max?.fileName
     },
     {
       scenario: 'Donation + CTB',
@@ -149,7 +156,8 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
           min: results.scenario6.min.totalNetGain,
           max: results.scenario6.max.totalNetGain
         }
-      } : null
+      } : null,
+      fileName: results.scenario6?.max?.fileName
     }
   ];
 
@@ -157,7 +165,34 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
   const rows = allRows.filter(row => row.data !== null);
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
+      {/* Hover Overlay */}
+      {hoveredRow !== null && rows[hoveredRow]?.fileName && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${hoverPosition.x}px`,
+            top: `${hoverPosition.y}px`,
+            transform: 'translate(-50%, -100%)',
+            backgroundColor: '#333',
+            color: '#fff',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: '500',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            zIndex: 10000,
+            pointerEvents: 'none',
+            maxWidth: '600px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}
+        >
+          📄 {rows[hoveredRow].fileName}
+        </div>
+      )}
+      
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Analysis Results</h2>
         {elapsedTime > 0 && (
@@ -235,7 +270,21 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
               return null;
             }
             return (
-              <tr key={index}>
+              <tr 
+                key={index}
+                onMouseEnter={(e) => {
+                  if (row.fileName) {
+                    setHoveredRow(index);
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoverPosition({ 
+                      x: rect.left + rect.width / 2, 
+                      y: rect.top - 10 
+                    });
+                  }
+                }}
+                onMouseLeave={() => setHoveredRow(null)}
+                style={{ position: 'relative', cursor: row.fileName ? 'pointer' : 'default' }}
+              >
                 <td className="scenario-name">{row.scenario}</td>
                 <td className="value-neutral">
                   {formatValue(row.data.agi)}

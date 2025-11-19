@@ -385,50 +385,29 @@ function createWorkbookCopy(scenarioNumber, userInputs, workingCopyId) {
       throw new Error('Sheet "Blended Solution Calculator" not found');
     }
     
-    // Read the three values for dynamic naming
-    const b43Value = sheet.getRange('B43').getValue() || 0;
-    const c92Value = sheet.getRange('C92').getValue() || 0;
-    const g47Value = sheet.getRange('G47').getValue() || 0;
-    const c90Value = sheet.getRange('C90').getValue() || 0;
+    // Set the working copy as active so nameFile reads from it
+    const originalActiveSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    SpreadsheetApp.setActiveSpreadsheet(ss);
     
-    Logger.log('Values - B43: ' + b43Value + ', C92: ' + c92Value + ', G47: ' + g47Value + ', C90: ' + c90Value);
-    
-    // Helper function to format value as $XXXk (rounded to nearest thousand)
-    const formatValue = (value, label) => {
-      const roundedThousands = Math.round(value / 1000);
-      if (roundedThousands > 0) {
-        return `$${roundedThousands}k ${label}`;
-      }
-      return '';
-    };
-    
-    // Determine donation type based on C90 value
-    // C90 = 0.3 (30%) => Land, C90 = 0.6 (60%) => Medtech
-    const donationType = (c90Value <= 0.35) ? 'Land' : 'Medtech';
-    Logger.log('Donation type: ' + donationType + ' (C90 = ' + c90Value + ')');
-    
-    // Build the filename parts - start with name
-    const namePart = userInputs.name || 'Unknown';
-    const parts = [namePart, scenarioNumber + ' -'];
-    
-    const solarPart = formatValue(b43Value, 'Solar');
-    if (solarPart) parts.push(solarPart);
-    
-    const donationPart = formatValue(c92Value, donationType);
-    if (donationPart) parts.push(donationPart);
-    
-    const refundPart = formatValue(g47Value, 'Refund');
-    if (refundPart) parts.push(refundPart);
-    
-    // Join: "Name - Scenario# - value_value_value"
-    // First element is name, second is scenario number, rest are values
+    // Use nameFile function from Addon.gs to generate filename
     let copyName;
-    if (parts.length === 2) {
-      // No values > 0, just use name and scenario number
-      copyName = `${parts[0]} - ${scenarioNumber}`;
-    } else {
-      // Name - Scenario# - values
-      copyName = parts[0] + ' - ' + parts[1] + ' ' + parts.slice(2).join('_');
+    try {
+      copyName = nameFile(true);  // returnOnly = true to just get the name
+      Logger.log('Generated filename from nameFile: ' + copyName);
+      
+      if (!copyName || copyName === null || copyName === '') {
+        // Fallback if nameFile fails
+        copyName = userInputs.name + ' - ' + scenarioNumber;
+        Logger.log('Using fallback filename: ' + copyName);
+      }
+    } catch (error) {
+      Logger.log('Error calling nameFile: ' + error.toString());
+      // Fallback filename
+      copyName = userInputs.name + ' - ' + scenarioNumber;
+      Logger.log('Using fallback filename due to error: ' + copyName);
+    } finally {
+      // Restore original active spreadsheet
+      SpreadsheetApp.setActiveSpreadsheet(originalActiveSpreadsheet);
     }
     
     const originalFile = DriveApp.getFileById(ss.getId());

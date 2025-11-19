@@ -478,7 +478,10 @@ async function runScenario({
   const outputs = await getOutputs(workingCopyId);
   
   // Create workbook copy from working copy
-  await createWorkbookCopy(scenarioNumber, userInputs, workingCopyId);
+  const copyResult = await createWorkbookCopy(scenarioNumber, userInputs, workingCopyId);
+  
+  // Add filename to outputs for hover display
+  outputs.fileName = copyResult.fileName || `Scenario ${scenarioNumber}`;
   
   return outputs;
 }
@@ -759,7 +762,10 @@ export async function runScenario6Only(userInputs, onProgress) {
       const outputs = await getOutputs(workingCopyId);
       
       // Create workbook copy from working copy
-      await createWorkbookCopy(6, userInputs, workingCopyId);
+      const copyResult = await createWorkbookCopy(6, userInputs, workingCopyId);
+      
+      // Add filename to outputs
+      outputs.fileName = copyResult.fileName || 'Scenario 6 Max';
       
       scenario6.max = outputs;
       saveCompletedScenario(analysisId, 6, 'max', scenario6.max);
@@ -799,7 +805,10 @@ export async function runScenario6Only(userInputs, onProgress) {
       const outputs = await getOutputs(workingCopyId);
       
       // Create workbook copy from working copy
-      await createWorkbookCopy(6, userInputs, workingCopyId);
+      const copyResult = await createWorkbookCopy(6, userInputs, workingCopyId);
+      
+      // Add filename to outputs
+      outputs.fileName = copyResult.fileName || 'Scenario 6 Min';
       
       scenario6.min = outputs;
       saveCompletedScenario(analysisId, 6, 'min', scenario6.min);
