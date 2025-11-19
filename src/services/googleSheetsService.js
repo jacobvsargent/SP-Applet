@@ -49,7 +49,14 @@ async function makeRequest(action, data = {}) {
     
   } catch (error) {
     // If CORS fails, fall back to no-cors for actions that don't need response data
-    console.warn('CORS request failed, using no-cors fallback:', error.message);
+    // This is expected behavior for Google Apps Script POST requests, so we don't log it
+    // Only log non-CORS/non-fetch errors
+    if (!error.message.includes('CORS') && 
+        !error.message.includes('fetch') && 
+        !error.message.includes('Failed to fetch') &&
+        !error.message.includes('NetworkError')) {
+      console.warn('Request error, using no-cors fallback:', error.message);
+    }
     
     await fetch(url, {
       method: 'POST',
