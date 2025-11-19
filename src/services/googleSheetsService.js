@@ -176,17 +176,21 @@ export async function callFunction(functionName, workingCopyId = null) {
 
 /**
  * Force recalculation of all formulas in the spreadsheet
+ * @param {string} workingCopyId - Optional working copy ID
  */
-export async function forceRecalculation() {
-  await makeRequest('forceRecalc');
+export async function forceRecalculation(workingCopyId = null) {
+  const data = workingCopyId ? { workingCopyId } : {};
+  await makeRequest('forceRecalc', data);
   await wait(WAIT_TIME);
 }
 
 /**
  * Clean up cells by calling zeroCellsByColorLimited
+ * @param {string} workingCopyId - Optional working copy ID
  */
-export async function cleanupLimited() {
-  await makeRequest('cleanupLimited');
+export async function cleanupLimited(workingCopyId = null) {
+  const data = workingCopyId ? { workingCopyId } : {};
+  await makeRequest('cleanupLimited', data);
   await wait(WAIT_TIME);
 }
 
@@ -221,7 +225,7 @@ export async function createWorkbookCopy(scenarioNumber, userInputs) {
  */
 export async function getOutputs(workingCopyId = null) {
   // Force recalculation before reading values
-  await forceRecalculation();
+  await forceRecalculation(workingCopyId);
   
   // Get the values
   const params = workingCopyId ? { workingCopyId } : {};
@@ -244,9 +248,11 @@ export async function getValue(cell, workingCopyId = null) {
 
 /**
  * Clean up the sheet by calling zeroCellsByColor
+ * @param {string} workingCopyId - Optional working copy ID
  */
-export async function cleanup() {
-  await makeRequest('cleanup');
+export async function cleanup(workingCopyId = null) {
+  const data = workingCopyId ? { workingCopyId } : {};
+  await makeRequest('cleanup', data);
   await wait(WAIT_TIME);
 }
 
@@ -369,7 +375,7 @@ async function runScenario({
   progressMessage
 }) {
   // Clean up previous scenario values
-  await cleanupLimited();
+  await cleanupLimited(workingCopyId);
   await wait(WAIT_TIME * 2);
   
   if (progressMessage) {
@@ -491,9 +497,9 @@ export async function runScenario5Only(userInputs, onProgress) {
     
     // Step 3: Clean up the working copy and set user inputs
     onProgress(8, 'Preparing working copy...');
-    await cleanup();  // Full cleanup to clear any residual data
+    await cleanup(workingCopyId);  // Full cleanup to clear any residual data
     await setUserInputs(userInputs, workingCopyId);  // Set correct user inputs
-    await cleanupLimited();  // Limited cleanup before scenarios
+    await cleanupLimited(workingCopyId);  // Limited cleanup before scenarios
     
     // Step 4: Run Scenario 1 (Baseline) if not completed
     let scenario1;
@@ -617,9 +623,9 @@ export async function runScenario6Only(userInputs, onProgress) {
     
     // Step 3: Clean up the working copy and set user inputs
     onProgress(8, 'Preparing working copy...');
-    await cleanup();  // Full cleanup to clear any residual data
+    await cleanup(workingCopyId);  // Full cleanup to clear any residual data
     await setUserInputs(userInputs, workingCopyId);  // Set correct user inputs
-    await cleanupLimited();  // Limited cleanup before scenarios
+    await cleanupLimited(workingCopyId);  // Limited cleanup before scenarios
     
     // Step 4: Run Scenario 1 (Baseline) if not completed
     let scenario1;
@@ -705,7 +711,7 @@ export async function runScenario6Only(userInputs, onProgress) {
       onProgress(70, 'Running Donation + CTB - Maximum (Medtech)...');
       
       // Clean up before running
-      await cleanupLimited();
+      await cleanupLimited(workingCopyId);
       await wait(WAIT_TIME * 2);
       
       // Set E17 (no solar coordination fee)
@@ -745,7 +751,7 @@ export async function runScenario6Only(userInputs, onProgress) {
       onProgress(90, 'Running Donation + CTB - Minimum (Land)...');
       
       // Clean up before running
-      await cleanupLimited();
+      await cleanupLimited(workingCopyId);
       await wait(WAIT_TIME * 2);
       
       // Set E17 (no solar coordination fee)
@@ -825,9 +831,9 @@ export async function runAllScenarios(userInputs, onProgress) {
     
     // Step 3: Clean up the working copy and set user inputs
     onProgress(8, 'Preparing working copy...');
-    await cleanup();  // Full cleanup to clear any residual data
+    await cleanup(workingCopyId);  // Full cleanup to clear any residual data
     await setUserInputs(userInputs, workingCopyId);  // Set correct user inputs
-    await cleanupLimited();  // Limited cleanup before scenarios
+    await cleanupLimited(workingCopyId);  // Limited cleanup before scenarios
     
     // SCENARIO 1: Do Nothing (Baseline)
     let scenario1;

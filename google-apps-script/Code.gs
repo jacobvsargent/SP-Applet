@@ -50,7 +50,7 @@ function doPost(e) {
         result = setValue(data);
         break;
       case 'forceRecalc':
-        result = forceRecalculation();
+        result = forceRecalculation(data.workingCopyId);
         break;
       case 'createWorkbookCopy':
         Logger.log('doPost received createWorkbookCopy request');
@@ -69,10 +69,10 @@ function doPost(e) {
         result = deleteWorkingCopy(data.workingCopyId);
         break;
       case 'cleanup':
-        result = cleanup();
+        result = cleanup(data.workingCopyId);
         break;
       case 'cleanupLimited':
-        result = cleanupLimited();
+        result = cleanupLimited(data.workingCopyId);
         break;
       default:
         result = { error: 'Unknown action: ' + action };
@@ -174,28 +174,43 @@ function setUserInputs(data) {
 function runScenario(data) {
   const functionName = data.function;
   
-  // Note: solveForITC and solveForITCRefund must exist in the script
-  // They will operate on the active spreadsheet context
-  // If workingCopyId is provided, we need to switch context
+  // CRITICAL: If workingCopyId is provided, we must set it as the active spreadsheet
+  // so that solveForITC and solveForITCRefund operate on the working copy
+  let originalActiveSpreadsheet = null;
+  
   if (data.workingCopyId) {
-    const ss = SpreadsheetApp.openById(data.workingCopyId);
-    // These functions are assumed to be part of the script and work on active context
-    // This is a limitation - they need to be modified to accept a spreadsheet parameter
-    // For now, we'll call them as-is (they should work on the opened spreadsheet)
+    // Save the current active spreadsheet (master)
+    originalActiveSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Open the working copy and set it as active
+    const workingCopy = SpreadsheetApp.openById(data.workingCopyId);
+    SpreadsheetApp.setActiveSpreadsheet(workingCopy);
+    
+    Logger.log('Switched to working copy: ' + data.workingCopyId);
   }
   
-  if (functionName === 'solveForITC') {
-    solveForITC();
-  } else if (functionName === 'solveForITCRefund') {
-    solveForITCRefund();
-  } else {
-    throw new Error('Unknown function: ' + functionName);
+  try {
+    // Now solveForITC and solveForITCRefund will operate on the working copy
+    if (functionName === 'solveForITC') {
+      solveForITC();
+    } else if (functionName === 'solveForITCRefund') {
+      solveForITCRefund();
+    } else {
+      throw new Error('Unknown function: ' + functionName);
+    }
+    
+    // Force calculation
+    SpreadsheetApp.flush();
+    
+    return { success: true };
+    
+  } finally {
+    // IMPORTANT: Restore the original active spreadsheet (master)
+    if (originalActiveSpreadsheet) {
+      SpreadsheetApp.setActiveSpreadsheet(originalActiveSpreadsheet);
+      Logger.log('Restored master spreadsheet as active');
+    }
   }
-  
-  // Force calculation
-  SpreadsheetApp.flush();
-  
-  return { success: true };
 }
 
 /**
@@ -214,8 +229,8 @@ function getOutputs(workingCopyId) {
     throw new Error('Sheet "Detailed Summary" not found');
   }
   
-  const agi = summarySheet.getRange('E117').getValue();
-  const totalTaxDue = summarySheet.getRange('L18').getValue();
+  const agi = summarySheet.getRange('E118').getValue();
+  const totalTaxDue = summarySheet.getRange('D18').getValue();
   const totalNetGain = summarySheet.getRange('H22').getValue();
   
   return {
@@ -299,10 +314,15 @@ function setValue(data) {
 
 /**
  * Force recalculation of all formulas in the spreadsheet
+ * @param {string} workingCopyId - Optional working copy ID
  */
-function forceRecalculation() {
+function forceRecalculation(workingCopyId) {
+  const ss = workingCopyId 
+    ? SpreadsheetApp.openById(workingCopyId)
+    : SpreadsheetApp.getActiveSpreadsheet();
+    
   SpreadsheetApp.flush();
-  SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(); // Triggers recalc
+  ss.getSpreadsheetTimeZone(); // Triggers recalc
   Utilities.sleep(200); // Wait 0.2 seconds for calculations to settle (reduced for performance)
   return { success: true };
 }
@@ -463,20 +483,66 @@ function createWorkbookCopy(scenarioNumber, userInputs) {
 
 /**
  * Clean up by calling zeroCellsByColor
+ * @param {string} workingCopyId - Optional working copy ID
  */
-function cleanup() {
-  zeroCellsByColor();
+function cleanup(workingCopyId) {
+  let originalActiveSpreadsheet = null;
   
-  return { success: true };
+  if (workingCopyId) {
+    // Save the current active spreadsheet
+    originalActiveSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Set working copy as active so zeroCellsByColor operates on it
+    const workingCopy = SpreadsheetApp.openById(workingCopyId);
+    SpreadsheetApp.setActiveSpreadsheet(workingCopy);
+    
+    Logger.log('Switched to working copy for cleanup: ' + workingCopyId);
+  }
+  
+  try {
+    // Now zeroCellsByColor will operate on the working copy
+    zeroCellsByColor();
+    return { success: true };
+    
+  } finally {
+    // Restore original active spreadsheet
+    if (originalActiveSpreadsheet) {
+      SpreadsheetApp.setActiveSpreadsheet(originalActiveSpreadsheet);
+      Logger.log('Restored master spreadsheet after cleanup');
+    }
+  }
 }
 
 /**
  * Clean up by calling zeroCellsByColorLimited (runs before each scenario)
+ * @param {string} workingCopyId - Optional working copy ID
  */
-function cleanupLimited() {
-  zeroCellsByColorLimited();
+function cleanupLimited(workingCopyId) {
+  let originalActiveSpreadsheet = null;
   
-  return { success: true };
+  if (workingCopyId) {
+    // Save the current active spreadsheet
+    originalActiveSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Set working copy as active so zeroCellsByColorLimited operates on it
+    const workingCopy = SpreadsheetApp.openById(workingCopyId);
+    SpreadsheetApp.setActiveSpreadsheet(workingCopy);
+    
+    Logger.log('Switched to working copy for limited cleanup: ' + workingCopyId);
+  }
+  
+  try {
+    // Now zeroCellsByColorLimited will operate on the working copy
+    zeroCellsByColorLimited();
+    return { success: true };
+    
+  } finally {
+    // Restore original active spreadsheet
+    if (originalActiveSpreadsheet) {
+      SpreadsheetApp.setActiveSpreadsheet(originalActiveSpreadsheet);
+      Logger.log('Restored master spreadsheet after limited cleanup');
+    }
+  }
 }
 
 /**
