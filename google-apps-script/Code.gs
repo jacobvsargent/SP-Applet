@@ -114,6 +114,19 @@ function doGet(e) {
       case 'getValue':
         result = getSingleValue(e.parameter.cell, workingCopyId);
         break;
+      case 'createFolder':
+        // Parse userInputs from JSON string
+        const userInputs = e.parameter.userInputs ? JSON.parse(e.parameter.userInputs) : {};
+        result = createAnalysisFolder(userInputs);
+        break;
+      case 'createWorkingCopy':
+        result = createWorkingCopy(e.parameter.folderId);
+        break;
+      case 'createWorkbookCopy':
+        const scenarioNumber = parseInt(e.parameter.scenarioNumber);
+        const copyUserInputs = e.parameter.userInputs ? JSON.parse(e.parameter.userInputs) : {};
+        result = createWorkbookCopy(scenarioNumber, copyUserInputs);
+        break;
       default:
         result = { error: 'Unknown GET action: ' + action };
     }

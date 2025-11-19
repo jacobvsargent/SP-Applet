@@ -35,23 +35,17 @@ const WRITE_ONLY_ACTIONS = [
  * Make a POST request to Google Apps Script
  * @param {string} action - The action to perform
  * @param {object} data - The data to send
- * @param {boolean} needsResponse - Whether we need to read the response (default: auto-detect)
  * @returns {Promise<object>} - Response data
  */
-async function makeRequest(action, data = {}, needsResponse = null) {
+async function makeRequest(action, data = {}) {
   if (!SCRIPT_URL) {
     throw new Error('Google Apps Script URL not configured. Please set VITE_GOOGLE_APPS_SCRIPT_URL in your .env file.');
   }
 
   const url = `${SCRIPT_URL}?action=${action}`;
   
-  // Auto-detect if we need a response
-  if (needsResponse === null) {
-    needsResponse = !WRITE_ONLY_ACTIONS.includes(action);
-  }
-  
   // For write-only operations, use no-cors directly to avoid console errors
-  if (!needsResponse) {
+  if (WRITE_ONLY_ACTIONS.includes(action)) {
     await fetch(url, {
       method: 'POST',
       mode: 'no-cors',
@@ -64,29 +58,19 @@ async function makeRequest(action, data = {}, needsResponse = null) {
     return { success: true };
   }
   
-  // For operations that need responses, try CORS (will work for GET-style actions)
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      redirect: 'follow',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    });
+  // For operations that need responses, use GET request (Apps Script supports GET with params)
+  const urlParams = new URLSearchParams({ action, ...data });
+  const getUrl = `${SCRIPT_URL}?${urlParams.toString()}`;
+  
+  const response = await fetch(getUrl, {
+    method: 'GET',
+  });
 
-    if (!response.ok) {
-      throw new Error(`Request failed: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    return result;
-    
-  } catch (error) {
-    // If CORS fails for a read operation, log it as it's unexpected
-    console.error('Failed to read response from Apps Script:', error.message);
-    throw error;
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.statusText}`);
   }
+
+  return await response.json();
 }
 
 /**
@@ -125,7 +109,7 @@ async function makeGetRequest(action, params = {}) {
  * @returns {Promise<object>} - Folder info {folderId, folderUrl, folderName}
  */
 export async function createAnalysisFolder(userInputs) {
-  const result = await makeRequest('createFolder', { userInputs }, true);
+  const result = await makeRequest('createFolder', { userInputs: JSON.stringify(userInputs) });
   await wait(WAIT_TIME);
   return result;
 }
@@ -136,7 +120,7 @@ export async function createAnalysisFolder(userInputs) {
  * @returns {Promise<object>} - Working copy info {workingCopyId, workingCopyUrl}
  */
 export async function createWorkingCopy(folderId) {
-  const result = await makeRequest('createWorkingCopy', { folderId }, true);
+  const result = await makeRequest('createWorkingCopy', { folderId });
   await wait(WAIT_TIME);
   return result;
 }
@@ -226,7 +210,7 @@ export async function cleanupLimited(workingCopyId = null) {
  */
 export async function createWorkbookCopy(scenarioNumber, userInputs) {
   console.log('📁 Creating workbook copy for scenario:', scenarioNumber, userInputs);
-  const result = await makeRequest('createWorkbookCopy', { scenarioNumber, userInputs }, true);
+  const result = await makeRequest('createWorkbookCopy', { scenarioNumber: scenarioNumber.toString(), userInputs: JSON.stringify(userInputs) });
   console.log('📁 Workbook copy result:', result);
   
   if (result.folderUrl) {
