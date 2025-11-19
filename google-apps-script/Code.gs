@@ -125,7 +125,8 @@ function doGet(e) {
       case 'createWorkbookCopy':
         const scenarioNumber = parseInt(e.parameter.scenarioNumber);
         const copyUserInputs = e.parameter.userInputs ? JSON.parse(e.parameter.userInputs) : {};
-        result = createWorkbookCopy(scenarioNumber, copyUserInputs);
+        const copyWorkingCopyId = e.parameter.workingCopyId || null;
+        result = createWorkbookCopy(scenarioNumber, copyUserInputs, copyWorkingCopyId);
         break;
       default:
         result = { error: 'Unknown GET action: ' + action };
@@ -159,6 +160,7 @@ function setUserInputs(data) {
     : SpreadsheetApp.getActiveSpreadsheet();
   
   Logger.log('🔍 Using spreadsheet: ' + ss.getName() + ' (ID: ' + ss.getId() + ')');
+  Logger.log('🔍 Spreadsheet URL: ' + ss.getUrl());
     
   const sheet = ss.getSheetByName('Blended Solution Calculator');
   
@@ -173,6 +175,8 @@ function setUserInputs(data) {
   sheet.getRange('B4').setValue(data.state);
   sheet.getRange('B9').setValue(data.filingStatus);
   sheet.getRange('G4').setValue(data.avgIncome);
+  
+  Logger.log('🔍 Values set successfully. Verifying C4 = ' + sheet.getRange('C4').getValue());
   
   // Force calculation and wait for it to settle
   SpreadsheetApp.flush();
@@ -291,9 +295,13 @@ function getSingleValue(cell, workingCopyId) {
  * @param {object} data - Contains cell, formula, and optional workingCopyId
  */
 function writeFormula(data) {
+  Logger.log('🔍 writeFormula called - cell: ' + data.cell + ', formula: ' + data.formula + ', workingCopyId: ' + data.workingCopyId);
+  
   const ss = data.workingCopyId 
     ? SpreadsheetApp.openById(data.workingCopyId)
     : SpreadsheetApp.getActiveSpreadsheet();
+  
+  Logger.log('🔍 writeFormula using spreadsheet: ' + ss.getName() + ' (ID: ' + ss.getId() + ')');
     
   const sheet = ss.getSheetByName('Blended Solution Calculator');
   
@@ -314,9 +322,13 @@ function writeFormula(data) {
  * @param {object} data - Contains cell, value, and optional workingCopyId
  */
 function setValue(data) {
+  Logger.log('🔍 setValue called - cell: ' + data.cell + ', value: ' + data.value + ', workingCopyId: ' + data.workingCopyId);
+  
   const ss = data.workingCopyId 
     ? SpreadsheetApp.openById(data.workingCopyId)
     : SpreadsheetApp.getActiveSpreadsheet();
+  
+  Logger.log('🔍 setValue using spreadsheet: ' + ss.getName() + ' (ID: ' + ss.getId() + ')');
     
   const sheet = ss.getSheetByName('Blended Solution Calculator');
   
@@ -352,13 +364,21 @@ function forceRecalculation(workingCopyId) {
  * All copies go into a folder named with user inputs and timestamp
  * @param {number} scenarioNumber - Scenario number (1-5)
  * @param {object} userInputs - User input data for folder naming
+ * @param {string} workingCopyId - Optional working copy ID to copy from
  */
-function createWorkbookCopy(scenarioNumber, userInputs) {
+function createWorkbookCopy(scenarioNumber, userInputs, workingCopyId) {
   try {
     Logger.log('Starting createWorkbookCopy for scenario: ' + scenarioNumber);
     Logger.log('User inputs: ' + JSON.stringify(userInputs));
+    Logger.log('Working copy ID: ' + workingCopyId);
     
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    // Use working copy if provided, otherwise use active spreadsheet (master)
+    const ss = workingCopyId 
+      ? SpreadsheetApp.openById(workingCopyId)
+      : SpreadsheetApp.getActiveSpreadsheet();
+      
+    Logger.log('Copying from spreadsheet: ' + ss.getName() + ' (ID: ' + ss.getId() + ')');
+    
     const sheet = ss.getSheetByName('Blended Solution Calculator');
     
     if (!sheet) {

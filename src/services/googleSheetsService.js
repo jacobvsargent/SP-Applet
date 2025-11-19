@@ -208,9 +208,16 @@ export async function cleanupLimited(workingCopyId = null) {
  * @param {object} userInputs - User input data for folder naming
  * @returns {Promise<object>} - Copy info
  */
-export async function createWorkbookCopy(scenarioNumber, userInputs) {
+export async function createWorkbookCopy(scenarioNumber, userInputs, workingCopyId = null) {
   console.log('📁 Creating workbook copy for scenario:', scenarioNumber, userInputs);
-  const result = await makeRequest('createWorkbookCopy', { scenarioNumber: scenarioNumber.toString(), userInputs: JSON.stringify(userInputs) });
+  const params = { 
+    scenarioNumber: scenarioNumber.toString(), 
+    userInputs: JSON.stringify(userInputs)
+  };
+  if (workingCopyId) {
+    params.workingCopyId = workingCopyId;
+  }
+  const result = await makeRequest('createWorkbookCopy', params);
   console.log('📁 Workbook copy result:', result);
   
   if (result.folderUrl) {
@@ -470,8 +477,8 @@ async function runScenario({
   // Get outputs
   const outputs = await getOutputs(workingCopyId);
   
-  // Create workbook copy
-  await createWorkbookCopy(scenarioNumber, userInputs);
+  // Create workbook copy from working copy
+  await createWorkbookCopy(scenarioNumber, userInputs, workingCopyId);
   
   return outputs;
 }
@@ -495,12 +502,17 @@ export async function runScenario5Only(userInputs, onProgress) {
     
     // Step 1: Create folder
     onProgress(2, 'Creating analysis folder...');
+    console.log('🔍 DEBUG: About to create analysis folder for:', userInputs);
     const folderInfo = await createAnalysisFolder(userInputs);
+    console.log('🔍 DEBUG: createAnalysisFolder returned:', folderInfo);
     const folderId = folderInfo.folderId;
+    console.log('🔍 DEBUG: Folder created with ID:', folderId);
     
     // Step 2: Create working copy
     onProgress(5, 'Creating working copy...');
+    console.log('🔍 DEBUG: About to create working copy in folder:', folderId);
     const workingCopyInfo = await createWorkingCopy(folderId);
+    console.log('🔍 DEBUG: createWorkingCopy returned:', workingCopyInfo);
     workingCopyId = workingCopyInfo.workingCopyId;
     
     // Step 3: Clean up the working copy and set user inputs
@@ -621,12 +633,17 @@ export async function runScenario6Only(userInputs, onProgress) {
     
     // Step 1: Create folder
     onProgress(2, 'Creating analysis folder...');
+    console.log('🔍 DEBUG: About to create analysis folder for:', userInputs);
     const folderInfo = await createAnalysisFolder(userInputs);
+    console.log('🔍 DEBUG: createAnalysisFolder returned:', folderInfo);
     const folderId = folderInfo.folderId;
+    console.log('🔍 DEBUG: Folder created with ID:', folderId);
     
     // Step 2: Create working copy
     onProgress(5, 'Creating working copy...');
+    console.log('🔍 DEBUG: About to create working copy in folder:', folderId);
     const workingCopyInfo = await createWorkingCopy(folderId);
+    console.log('🔍 DEBUG: createWorkingCopy returned:', workingCopyInfo);
     workingCopyId = workingCopyInfo.workingCopyId;
     
     // Step 3: Clean up the working copy and set user inputs
@@ -741,8 +758,8 @@ export async function runScenario6Only(userInputs, onProgress) {
       // Get outputs
       const outputs = await getOutputs(workingCopyId);
       
-      // Create workbook copy
-      await createWorkbookCopy(6, userInputs);
+      // Create workbook copy from working copy
+      await createWorkbookCopy(6, userInputs, workingCopyId);
       
       scenario6.max = outputs;
       saveCompletedScenario(analysisId, 6, 'max', scenario6.max);
@@ -781,8 +798,8 @@ export async function runScenario6Only(userInputs, onProgress) {
       // Get outputs
       const outputs = await getOutputs(workingCopyId);
       
-      // Create workbook copy
-      await createWorkbookCopy(6, userInputs);
+      // Create workbook copy from working copy
+      await createWorkbookCopy(6, userInputs, workingCopyId);
       
       scenario6.min = outputs;
       saveCompletedScenario(analysisId, 6, 'min', scenario6.min);
