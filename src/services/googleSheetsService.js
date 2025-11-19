@@ -17,20 +17,55 @@ const WAIT_TIME = 100; // 0.1 seconds wait time between operations
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
+ * Actions that don't need to read responses - use no-cors mode directly
+ * This avoids CORS preflight errors in the console
+ */
+const WRITE_ONLY_ACTIONS = [
+  'setInputs',
+  'writeFormula',
+  'setValue',
+  'forceRecalc',
+  'cleanup',
+  'cleanupLimited',
+  'runScenario',
+  'deleteWorkingCopy'
+];
+
+/**
  * Make a POST request to Google Apps Script
  * @param {string} action - The action to perform
  * @param {object} data - The data to send
+ * @param {boolean} needsResponse - Whether we need to read the response (default: auto-detect)
  * @returns {Promise<object>} - Response data
  */
-async function makeRequest(action, data = {}) {
+async function makeRequest(action, data = {}, needsResponse = null) {
   if (!SCRIPT_URL) {
     throw new Error('Google Apps Script URL not configured. Please set VITE_GOOGLE_APPS_SCRIPT_URL in your .env file.');
   }
 
   const url = `${SCRIPT_URL}?action=${action}`;
   
+  // Auto-detect if we need a response
+  if (needsResponse === null) {
+    needsResponse = !WRITE_ONLY_ACTIONS.includes(action);
+  }
+  
+  // For write-only operations, use no-cors directly to avoid console errors
+  if (!needsResponse) {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    });
+    
+    return { success: true };
+  }
+  
+  // For operations that need responses, try CORS (will work for GET-style actions)
   try {
-    // Try with CORS first (for actions that need to read responses)
     const response = await fetch(url, {
       method: 'POST',
       redirect: 'follow',
@@ -48,27 +83,9 @@ async function makeRequest(action, data = {}) {
     return result;
     
   } catch (error) {
-    // If CORS fails, fall back to no-cors for actions that don't need response data
-    // This is expected behavior for Google Apps Script POST requests, so we don't log it
-    // Only log non-CORS/non-fetch errors
-    if (!error.message.includes('CORS') && 
-        !error.message.includes('fetch') && 
-        !error.message.includes('Failed to fetch') &&
-        !error.message.includes('NetworkError')) {
-      console.warn('Request error, using no-cors fallback:', error.message);
-    }
-    
-    await fetch(url, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    });
-    
-    // For no-cors, we can't read the response
-    return { success: true };
+    // If CORS fails for a read operation, log it as it's unexpected
+    console.error('Failed to read response from Apps Script:', error.message);
+    throw error;
   }
 }
 
@@ -108,7 +125,7 @@ async function makeGetRequest(action, params = {}) {
  * @returns {Promise<object>} - Folder info {folderId, folderUrl, folderName}
  */
 export async function createAnalysisFolder(userInputs) {
-  const result = await makeRequest('createFolder', { userInputs });
+  const result = await makeRequest('createFolder', { userInputs }, true);
   await wait(WAIT_TIME);
   return result;
 }
@@ -119,7 +136,7 @@ export async function createAnalysisFolder(userInputs) {
  * @returns {Promise<object>} - Working copy info {workingCopyId, workingCopyUrl}
  */
 export async function createWorkingCopy(folderId) {
-  const result = await makeRequest('createWorkingCopy', { folderId });
+  const result = await makeRequest('createWorkingCopy', { folderId }, true);
   await wait(WAIT_TIME);
   return result;
 }
@@ -209,7 +226,7 @@ export async function cleanupLimited(workingCopyId = null) {
  */
 export async function createWorkbookCopy(scenarioNumber, userInputs) {
   console.log('📁 Creating workbook copy for scenario:', scenarioNumber, userInputs);
-  const result = await makeRequest('createWorkbookCopy', { scenarioNumber, userInputs });
+  const result = await makeRequest('createWorkbookCopy', { scenarioNumber, userInputs }, true);
   console.log('📁 Workbook copy result:', result);
   
   if (result.folderUrl) {
@@ -834,7 +851,9 @@ export async function runAllScenarios(userInputs, onProgress) {
     
     // Step 2: Create working copy
     onProgress(5, 'Creating working copy...');
+    console.log('🔍 DEBUG: About to create working copy in folder:', folderId);
     const workingCopyInfo = await createWorkingCopy(folderId);
+    console.log('🔍 DEBUG: createWorkingCopy returned:', workingCopyInfo);
     workingCopyId = workingCopyInfo.workingCopyId;
     console.log('🔍 DEBUG: Working copy created with ID:', workingCopyId);
     console.log('🔍 DEBUG: Working copy URL:', workingCopyInfo.workingCopyUrl);
