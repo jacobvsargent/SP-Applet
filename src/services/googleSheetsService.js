@@ -219,6 +219,7 @@ export async function createWorkbookCopy(scenarioNumber, userInputs, workingCopy
   }
   const result = await makeRequest('createWorkbookCopy', params);
   console.log('📁 Workbook copy result:', result);
+  console.log('📁 Filename from result:', result.fileName);
   
   if (result.folderUrl) {
     console.log('📂 FOLDER URL:', result.folderUrl);

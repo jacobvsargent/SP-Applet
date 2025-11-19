@@ -169,14 +169,17 @@ function setUserInputs(data) {
   }
   
   Logger.log('🔍 About to set income: ' + data.income + ' to cell C4');
+  Logger.log('🔍 About to set name: ' + data.name + ' to cell Q5');
   
   // Set the values in the appropriate cells
   sheet.getRange('C4').setValue(data.income);
   sheet.getRange('B4').setValue(data.state);
   sheet.getRange('B9').setValue(data.filingStatus);
   sheet.getRange('G4').setValue(data.avgIncome);
+  sheet.getRange('Q5').setValue(data.name);  // Set client name
   
   Logger.log('🔍 Values set successfully. Verifying C4 = ' + sheet.getRange('C4').getValue());
+  Logger.log('🔍 Verifying Q5 = ' + sheet.getRange('Q5').getValue());
   
   // Force calculation and wait for it to settle
   SpreadsheetApp.flush();
