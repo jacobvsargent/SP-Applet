@@ -230,7 +230,7 @@ export async function createWorkbookCopy(scenarioNumber, userInputs, workingCopy
   }
   
   await wait(WAIT_TIME);
-  return { success: true };
+  return result;  // Return the full result with fileName
 }
 
 /**
