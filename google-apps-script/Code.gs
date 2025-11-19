@@ -137,16 +137,23 @@ function doGet(e) {
  * @param {object} data - Contains income, avgIncome, state, filingStatus, and optional workingCopyId
  */
 function setUserInputs(data) {
+  Logger.log('🔍 setUserInputs called with workingCopyId: ' + data.workingCopyId);
+  Logger.log('🔍 Data object: ' + JSON.stringify(data));
+  
   // Use working copy if provided, otherwise use active spreadsheet (master)
   const ss = data.workingCopyId 
     ? SpreadsheetApp.openById(data.workingCopyId)
     : SpreadsheetApp.getActiveSpreadsheet();
+  
+  Logger.log('🔍 Using spreadsheet: ' + ss.getName() + ' (ID: ' + ss.getId() + ')');
     
   const sheet = ss.getSheetByName('Blended Solution Calculator');
   
   if (!sheet) {
     throw new Error('Sheet "Blended Solution Calculator" not found');
   }
+  
+  Logger.log('🔍 About to set income: ' + data.income + ' to cell C4');
   
   // Set the values in the appropriate cells
   sheet.getRange('C4').setValue(data.income);
@@ -486,17 +493,22 @@ function createWorkbookCopy(scenarioNumber, userInputs) {
  * @param {string} workingCopyId - Optional working copy ID
  */
 function cleanup(workingCopyId) {
+  Logger.log('🔍 cleanup called with workingCopyId: ' + workingCopyId);
+  
   let originalActiveSpreadsheet = null;
   
   if (workingCopyId) {
     // Save the current active spreadsheet
     originalActiveSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    Logger.log('🔍 Original active spreadsheet: ' + originalActiveSpreadsheet.getName());
     
     // Set working copy as active so zeroCellsByColor operates on it
     const workingCopy = SpreadsheetApp.openById(workingCopyId);
     SpreadsheetApp.setActiveSpreadsheet(workingCopy);
     
-    Logger.log('Switched to working copy for cleanup: ' + workingCopyId);
+    Logger.log('🔍 Switched to working copy for cleanup: ' + workingCopy.getName() + ' (ID: ' + workingCopyId + ')');
+  } else {
+    Logger.log('🔍 WARNING: No workingCopyId provided to cleanup! Operating on master!');
   }
   
   try {
@@ -518,17 +530,22 @@ function cleanup(workingCopyId) {
  * @param {string} workingCopyId - Optional working copy ID
  */
 function cleanupLimited(workingCopyId) {
+  Logger.log('🔍 cleanupLimited called with workingCopyId: ' + workingCopyId);
+  
   let originalActiveSpreadsheet = null;
   
   if (workingCopyId) {
     // Save the current active spreadsheet
     originalActiveSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    Logger.log('🔍 Original active spreadsheet: ' + originalActiveSpreadsheet.getName());
     
     // Set working copy as active so zeroCellsByColorLimited operates on it
     const workingCopy = SpreadsheetApp.openById(workingCopyId);
     SpreadsheetApp.setActiveSpreadsheet(workingCopy);
     
-    Logger.log('Switched to working copy for limited cleanup: ' + workingCopyId);
+    Logger.log('🔍 Switched to working copy for limited cleanup: ' + workingCopy.getName() + ' (ID: ' + workingCopyId + ')');
+  } else {
+    Logger.log('🔍 WARNING: No workingCopyId provided to cleanupLimited! Operating on master!');
   }
   
   try {

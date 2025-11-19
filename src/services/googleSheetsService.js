@@ -823,16 +823,22 @@ export async function runAllScenarios(userInputs, onProgress) {
     onProgress(2, 'Creating analysis folder...');
     const folderInfo = await createAnalysisFolder(userInputs);
     const folderId = folderInfo.folderId;
+    console.log('🔍 DEBUG: Folder created with ID:', folderId);
     
     // Step 2: Create working copy
     onProgress(5, 'Creating working copy...');
     const workingCopyInfo = await createWorkingCopy(folderId);
     workingCopyId = workingCopyInfo.workingCopyId;
+    console.log('🔍 DEBUG: Working copy created with ID:', workingCopyId);
+    console.log('🔍 DEBUG: Working copy URL:', workingCopyInfo.workingCopyUrl);
     
     // Step 3: Clean up the working copy and set user inputs
     onProgress(8, 'Preparing working copy...');
+    console.log('🔍 DEBUG: About to call cleanup with workingCopyId:', workingCopyId);
     await cleanup(workingCopyId);  // Full cleanup to clear any residual data
+    console.log('🔍 DEBUG: About to call setUserInputs with workingCopyId:', workingCopyId);
     await setUserInputs(userInputs, workingCopyId);  // Set correct user inputs
+    console.log('🔍 DEBUG: About to call cleanupLimited with workingCopyId:', workingCopyId);
     await cleanupLimited(workingCopyId);  // Limited cleanup before scenarios
     
     // SCENARIO 1: Do Nothing (Baseline)
