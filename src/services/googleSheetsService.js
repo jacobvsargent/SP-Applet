@@ -326,7 +326,18 @@ function getCompletedScenarios(analysisId) {
       return {};
     }
     
-    return state[analysisId].completed || {};
+    // Check if cached scenarios have fileName property (new feature)
+    // If not, invalidate the cache to force fresh analysis with filenames
+    const completed = state[analysisId].completed || {};
+    for (const key in completed) {
+      if (completed[key] && !completed[key].fileName) {
+        console.log('Cached scenarios missing fileName property, invalidating cache');
+        clearAnalysisState(analysisId);
+        return {};
+      }
+    }
+    
+    return completed;
   } catch (error) {
     console.warn('Failed to read scenarios from localStorage:', error);
     return {};
@@ -482,7 +493,11 @@ async function runScenario({
   const copyResult = await createWorkbookCopy(scenarioNumber, userInputs, workingCopyId);
   
   // Add filename to outputs for hover display
+  console.log('🔍 copyResult.fileName:', copyResult.fileName);
+  console.log('🔍 copyResult.fileName type:', typeof copyResult.fileName);
+  console.log('🔍 copyResult.fileName truthiness:', !!copyResult.fileName);
   outputs.fileName = copyResult.fileName || `Scenario ${scenarioNumber}`;
+  console.log('🔍 outputs.fileName after assignment:', outputs.fileName);
   
   return outputs;
 }
@@ -735,6 +750,7 @@ export async function runScenario6Only(userInputs, onProgress) {
     if (completed.scenario6_max) {
       console.log('✅ Using cached Scenario 6 Max');
       scenario6.max = completed.scenario6_max;
+      console.log('🔍 Cached scenario6.max.fileName:', scenario6.max.fileName);
       onProgress(70, 'Using cached Scenario 6 Max...');
     } else {
       onProgress(70, 'Running Donation + CTB - Maximum (Medtech)...');
