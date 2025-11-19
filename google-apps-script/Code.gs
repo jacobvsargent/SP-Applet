@@ -3,7 +3,7 @@
  * 
  * Google Apps Script Web App for Tax Solar Analysis
  * 
- * DEPLOYMENT INSTRUCTIONS:
+ * DEPLOYMENT INSTRUCTIONS: s
  * 1. Open your Google Sheet
  * 2. Go to Extensions > Apps Script
  * 3. Replace the content of Code.gs with this file
