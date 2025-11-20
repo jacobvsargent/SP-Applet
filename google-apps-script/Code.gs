@@ -176,6 +176,12 @@ function setUserInputs(data) {
   sheet.getRange('B4').setValue(data.state);
   sheet.getRange('B9').setValue(data.filingStatus);
   
+  // Handle capitalGains - write to C9 (optional)
+  if (data.capitalGains) {
+    sheet.getRange('C9').setValue(data.capitalGains);
+    Logger.log('🔍 Set capitalGains to C9: ' + data.capitalGains);
+  }
+  
   // Handle avgIncome and knownFederalTax - write to G10
   if (data.avgIncome) {
     sheet.getRange('G10').setValue(data.avgIncome);

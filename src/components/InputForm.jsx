@@ -6,6 +6,7 @@ export default function InputForm({ onSubmit }) {
   const [formData, setFormData] = useState({
     name: '',
     income: '',
+    capitalGains: '',
     avgIncome: '',
     knownFederalTax: '',
     state: '',
@@ -37,6 +38,13 @@ export default function InputForm({ onSubmit }) {
           return 'This field is required';
         }
         if (!isValidCurrency(value)) {
+          return 'Please enter a valid number (e.g., $75,000 or 75000)';
+        }
+        return '';
+      
+      case 'capitalGains':
+        // Optional field
+        if (value && value.trim() !== '' && !isValidCurrency(value)) {
           return 'Please enter a valid number (e.g., $75,000 or 75000)';
         }
         return '';
@@ -98,7 +106,7 @@ export default function InputForm({ onSubmit }) {
     }));
 
     // Format currency fields
-    if ((name === 'income' || name === 'avgIncome' || name === 'knownFederalTax') && value && isValidCurrency(value)) {
+    if ((name === 'income' || name === 'capitalGains' || name === 'avgIncome' || name === 'knownFederalTax') && value && isValidCurrency(value)) {
       const numericValue = parseCurrency(value);
       const formatted = formatCurrencyInput(numericValue);
       setFormData(prev => ({
@@ -147,6 +155,7 @@ export default function InputForm({ onSubmit }) {
       const submissionData = {
         name: formData.name.trim(),
         income: parseCurrency(formData.income),
+        capitalGains: formData.capitalGains ? parseCurrency(formData.capitalGains) : null,
         avgIncome: formData.avgIncome ? parseCurrency(formData.avgIncome) : null,
         knownFederalTax: formData.knownFederalTax ? parseCurrency(formData.knownFederalTax) : null,
         state: formData.state,
@@ -207,21 +216,41 @@ export default function InputForm({ onSubmit }) {
         )}
       </div>
 
-      <div className="form-group">
-        <label htmlFor="income">2025 Ordinary Income</label>
-        <input
-          type="text"
-          id="income"
-          name="income"
-          value={formData.income}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          placeholder="e.g., $75,000 or 75000"
-          className={errors.income && touched.income ? 'error' : ''}
-        />
-        {errors.income && touched.income && (
-          <div className="error-message">{errors.income}</div>
-        )}
+      {/* Side-by-side fields: income and capitalGains */}
+      <div style={{ display: 'flex', gap: '16px' }}>
+        <div className="form-group" style={{ flex: 1 }}>
+          <label htmlFor="income">2025 Ordinary Income</label>
+          <input
+            type="text"
+            id="income"
+            name="income"
+            value={formData.income}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder="e.g., $75,000 or 75000"
+            className={errors.income && touched.income ? 'error' : ''}
+          />
+          {errors.income && touched.income && (
+            <div className="error-message">{errors.income}</div>
+          )}
+        </div>
+
+        <div className="form-group" style={{ flex: 1 }}>
+          <label htmlFor="capitalGains">2025 Long-term Capital Gains</label>
+          <input
+            type="text"
+            id="capitalGains"
+            name="capitalGains"
+            value={formData.capitalGains}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder="e.g., $50,000 or 50000 (optional)"
+            className={errors.capitalGains && touched.capitalGains ? 'error' : ''}
+          />
+          {errors.capitalGains && touched.capitalGains && (
+            <div className="error-message">{errors.capitalGains}</div>
+          )}
+        </div>
       </div>
 
       {/* Side-by-side fields: avgIncome and knownFederalTax */}
