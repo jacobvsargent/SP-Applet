@@ -162,6 +162,13 @@ function setUserInputs(data) {
     throw new Error('Sheet "Blended Solution Calculator" not found');
   }
   
+  // DIAGNOSTIC: Write to A1-E1 to confirm function is being called and show values
+  sheet.getRange('A1').setValue('setUserInputs: ' + new Date().toLocaleTimeString());
+  sheet.getRange('B1').setValue('WorkingCopyId: ' + (data.workingCopyId || 'NONE'));
+  sheet.getRange('C1').setValue('avgIncome: ' + (data.avgIncome || 'none'));
+  sheet.getRange('D1').setValue('knownTax: ' + (data.knownFederalTax || 'none'));
+  sheet.getRange('E1').setValue('income: ' + (data.income || 'none'));
+  
   // Set the values in the appropriate cells
   sheet.getRange('C4').setValue(data.income);
   sheet.getRange('B4').setValue(data.state);
@@ -175,6 +182,8 @@ function setUserInputs(data) {
   // Handle G10 population: knownFederalTax takes priority over avgIncome
   if (data.knownFederalTax) {
     // If knownFederalTax is provided, use it directly (skip avgIncome processing)
+    sheet.getRange('F1').setValue('Using knownFederalTax path');
+    
     sheet.getRange('G10').clearContent();
     SpreadsheetApp.flush();
     Utilities.sleep(500);
@@ -183,14 +192,24 @@ function setUserInputs(data) {
     sheet.getRange('G10').setValue(taxValue);
     SpreadsheetApp.flush();
     Utilities.sleep(500);
+    
+    // Verify what actually got written
+    sheet.getRange('G1').setValue('G10 after write: ' + sheet.getRange('G10').getValue());
   } else if (data.avgIncome) {
     // Only process avgIncome if knownFederalTax is NOT provided
+    sheet.getRange('F1').setValue('Using avgIncome path');
+    
     sheet.getRange('G4').setValue(data.avgIncome);
+    sheet.getRange('H1').setValue('G4 after write: ' + sheet.getRange('G4').getValue());
+    
     SpreadsheetApp.flush();
     Utilities.sleep(1000);  // Wait for sheet to recalculate
     
     const g6Value = sheet.getRange('G6').getValue();
+    sheet.getRange('I1').setValue('G6 value: ' + g6Value);
+    
     sheet.getRange('G10').setValue(g6Value);
+    sheet.getRange('J1').setValue('G10 after write: ' + sheet.getRange('G10').getValue());
   }
   
   sheet.getRange('Q5').setValue(data.name);  // Set client name

@@ -31,11 +31,30 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
   };
 
   /**
+   * Calculate Taxable Income (AGI + Capital Gains)
+   */
+  const calculateTaxableIncome = (agi) => {
+    const capitalGains = userInputs.capitalGains || 0;
+    
+    // Handle range values (min/max)
+    if (typeof agi === 'object' && agi.min !== undefined && agi.max !== undefined) {
+      return {
+        min: agi.min + capitalGains,
+        max: agi.max + capitalGains
+      };
+    }
+    
+    // Handle single value
+    return agi + capitalGains;
+  };
+
+  /**
    * Calculate baseline "What You Keep" for Do Nothing scenario (X)
    */
   const calculateBaselineWhatYouKeep = () => {
     if (!results.scenario1) return 0;
-    return results.scenario1.agi - results.scenario1.totalTaxDue;
+    const taxableIncome = calculateTaxableIncome(results.scenario1.agi);
+    return taxableIncome - results.scenario1.totalTaxDue;
   };
 
   /**
@@ -451,13 +470,13 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
               >
                 <td className="scenario-name">{row.scenario}</td>
                 <td className="value-neutral">
-                  {formatValue(row.data.agi)}
+                  {formatValue(calculateTaxableIncome(row.data.agi))}
                 </td>
                 <td className="value-negative">
                   {formatValue(row.data.totalTaxDue)}
                 </td>
                 <td className="value-positive">
-                  {formatValue(calculateWhatYouKeep(row.data.agi, row.data.totalTaxDue, row.data.totalNetGain, isDoNothing))}
+                  {formatValue(calculateWhatYouKeep(calculateTaxableIncome(row.data.agi), row.data.totalTaxDue, row.data.totalNetGain, isDoNothing))}
                 </td>
                 <td className={getNetGainClass(row.data.totalNetGain)}>
                   {formatValue(row.data.totalNetGain)}
