@@ -218,8 +218,15 @@ function setUserInputs(data) {
   SpreadsheetApp.flush();
   Utilities.sleep(200); // Wait 0.2 seconds for calculations (reduced for performance)
   
-  // Make G10 equal to G6
-  sheet.getRange('G10').setFormula('=G6');
+  // Only set G10 formula if we didn't already handle it above
+  // (Don't overwrite if knownFederalTax or avgIncome already set it)
+  if (!data.knownFederalTax && !data.avgIncome) {
+    // Make G10 equal to G6 as default
+    sheet.getRange('G10').setFormula('=G6');
+    sheet.getRange('K1').setValue('Set G10 formula to =G6 (default)');
+  } else {
+    sheet.getRange('K1').setValue('Skipped G10 formula (already set by knownTax or avgIncome)');
+  }
   
   // Force calculation again
   SpreadsheetApp.flush();
