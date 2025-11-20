@@ -194,7 +194,7 @@ export default function InputForm({ onSubmit }) {
       </div>
 
       <div className="form-group">
-        <label htmlFor="avgIncome">Average Annual Income (Last 3 Years)</label>
+        <label htmlFor="avgIncome">Estimated 2022 Income</label>
         <input
           type="text"
           id="avgIncome"
@@ -364,9 +364,6 @@ export default function InputForm({ onSubmit }) {
             />
             Both (Separate)
           </label>
-        </div>
-        <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
-          Choose donation calculations: Single type, Range (min-max), or Separate rows for each.
         </div>
       </div>
 

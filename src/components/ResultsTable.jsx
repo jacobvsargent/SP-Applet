@@ -406,7 +406,7 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
           {rows.map((row, index) => {
             const isDoNothing = row.scenario === SCENARIOS.DO_NOTHING;
             // Safety check - ensure row.data exists and has required properties
-            if (!row.data || !row.data.agi || !row.data.totalTaxDue || row.data.totalNetGain === undefined) {
+            if (!row.data || row.data.agi === undefined || row.data.totalTaxDue === undefined || row.data.totalNetGain === undefined) {
               console.warn('Invalid row data:', row);
               return null;
             }
