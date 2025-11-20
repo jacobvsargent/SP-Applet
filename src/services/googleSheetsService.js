@@ -1107,3 +1107,249 @@ export async function runAllScenarios(userInputs, onProgress) {
   }
 }
 
+/**
+ * Run selected scenarios (Scenario 1 always runs, plus user-selected scenarios 2-6)
+ * @param {object} userInputs - User input data
+ * @param {array} selectedScenarios - Array of scenario numbers to run (e.g., [2, 3, 5])
+ * @param {function} onProgress - Progress callback
+ * @returns {Promise<object>} - Selected scenario results
+ */
+export async function runSelectedScenarios(userInputs, selectedScenarios, onProgress) {
+  const analysisId = generateAnalysisId(userInputs) + '_selected';
+  let workingCopyId = null;
+  
+  try {
+    onProgress(0, 'Setting up your analysis...');
+    
+    // Step 1: Create folder
+    onProgress(2, 'Creating analysis folder...');
+    const folderInfo = await createAnalysisFolder(userInputs);
+    const folderId = folderInfo.folderId;
+    
+    // Step 2: Create working copy
+    onProgress(5, 'Creating working copy...');
+    const workingCopyInfo = await createWorkingCopy(folderId);
+    workingCopyId = workingCopyInfo.workingCopyId;
+    
+    // Step 3: Clean up and set user inputs
+    onProgress(8, 'Preparing working copy...');
+    await cleanup(workingCopyId);
+    await setUserInputs(userInputs, workingCopyId);
+    await cleanupLimited(workingCopyId);
+    
+    const results = {};
+    const totalScenarios = 1 + selectedScenarios.length;  // +1 for scenario 1
+    let currentScenario = 0;
+    
+    // Always run Scenario 1 (Baseline)
+    onProgress(10, 'Running Baseline (Do Nothing)...');
+    results.scenario1 = await runScenario({
+      userInputs,
+      onProgress,
+      workingCopyId,
+      folderId,
+      scenarioNumber: 1,
+      solarBoolean: false,
+      solarCoordinationFee: 0,
+      donationType: 'none',
+      getRefund: false,
+      progressMessage: 'Capturing baseline results...'
+    });
+    currentScenario++;
+    
+    // Run selected scenarios
+    for (const scenarioNum of selectedScenarios) {
+      const progress = 10 + (currentScenario / totalScenarios) * 85;
+      
+      switch(scenarioNum) {
+        case 2:  // Solar Only
+          onProgress(progress, 'Running Solar Only...');
+          results.scenario2 = await runScenario({
+            userInputs,
+            onProgress,
+            workingCopyId,
+            folderId,
+            scenarioNumber: 2,
+            solarBoolean: true,
+            solarCoordinationFee: 1950,
+            donationType: 'none',
+            getRefund: false,
+            progressMessage: 'Capturing Solar Only results...'
+          });
+          break;
+          
+        case 3:  // Donation Only
+          onProgress(progress, 'Running Donation Only...');
+          const scenario3 = {};
+          
+          // Max (Medtech)
+          scenario3.max = await runScenario({
+            userInputs,
+            onProgress,
+            workingCopyId,
+            folderId,
+            scenarioNumber: 3,
+            solarBoolean: false,
+            solarCoordinationFee: 0,
+            donationType: 'medtech',
+            getRefund: false,
+            progressMessage: 'Capturing Donation Only maximum...'
+          });
+          
+          // Min (Land) if not skipped
+          if (!userInputs.skipScenario5Min) {
+            scenario3.min = await runScenario({
+              userInputs,
+              onProgress,
+              workingCopyId,
+              folderId,
+              scenarioNumber: 3,
+              solarBoolean: false,
+              solarCoordinationFee: 0,
+              donationType: 'land',
+              getRefund: false,
+              progressMessage: 'Capturing Donation Only minimum...'
+            });
+          } else {
+            scenario3.min = scenario3.max;
+          }
+          
+          results.scenario3 = scenario3;
+          break;
+          
+        case 4:  // Solar + Donation (No Refund)
+          onProgress(progress, 'Running Solar + Donation (No Refund)...');
+          const scenario4 = {};
+          
+          // Max (Medtech)
+          scenario4.max = await runScenario({
+            userInputs,
+            onProgress,
+            workingCopyId,
+            folderId,
+            scenarioNumber: 4,
+            solarBoolean: true,
+            solarCoordinationFee: 1950,
+            donationType: 'medtech',
+            getRefund: false,
+            progressMessage: 'Capturing Solar + Donation (No Refund) maximum...'
+          });
+          
+          // Min (Land) if not skipped
+          if (!userInputs.skipScenario5Min) {
+            scenario4.min = await runScenario({
+              userInputs,
+              onProgress,
+              workingCopyId,
+              folderId,
+              scenarioNumber: 4,
+              solarBoolean: true,
+              solarCoordinationFee: 1950,
+              donationType: 'land',
+              getRefund: false,
+              progressMessage: 'Capturing Solar + Donation (No Refund) minimum...'
+            });
+          } else {
+            scenario4.min = scenario4.max;
+          }
+          
+          results.scenario4 = scenario4;
+          break;
+          
+        case 5:  // Solar + Donation (With Refund)
+          onProgress(progress, 'Running Solar + Donation (With Refund)...');
+          const scenario5 = {};
+          
+          // Max (Medtech)
+          scenario5.max = await runScenario({
+            userInputs,
+            onProgress,
+            workingCopyId,
+            folderId,
+            scenarioNumber: 5,
+            solarBoolean: true,
+            solarCoordinationFee: 1950,
+            donationType: 'medtech',
+            getRefund: true,
+            progressMessage: 'Capturing Solar + Donation (With Refund) maximum...'
+          });
+          
+          // Min (Land) if not skipped
+          if (!userInputs.skipScenario5Min) {
+            scenario5.min = await runScenario({
+              userInputs,
+              onProgress,
+              workingCopyId,
+              folderId,
+              scenarioNumber: 5,
+              solarBoolean: true,
+              solarCoordinationFee: 1950,
+              donationType: 'land',
+              getRefund: true,
+              progressMessage: 'Capturing Solar + Donation (With Refund) minimum...'
+            });
+          } else {
+            scenario5.min = scenario5.max;
+          }
+          
+          results.scenario5 = scenario5;
+          break;
+          
+        case 6:  // Donation + CTB
+          onProgress(progress, 'Running Donation + CTB...');
+          const scenario6 = {};
+          
+          // Max (Medtech)
+          await cleanupLimited(workingCopyId);
+          await wait(WAIT_TIME * 2);
+          await setValue('E17', 0, workingCopyId);
+          await writeFormula('C92', '=MAX(0, B92)', workingCopyId);
+          await setValue('C90', 0.6, workingCopyId);
+          await setValue('C88', 5, workingCopyId);
+          await writeFormula('G88', '=MIN(L100, F88)', workingCopyId);
+          await setValue('B43', 0, workingCopyId);
+          await setValue('F47', 0, workingCopyId);
+          await writeFormula('J124', '=I124', workingCopyId);
+          
+          const outputs = await getOutputs(workingCopyId);
+          const copyResult = await createWorkbookCopy(6, userInputs, workingCopyId);
+          outputs.fileName = copyResult.fileName || 'Scenario 6 Max';
+          scenario6.max = outputs;
+          
+          // Min (Land) if not skipped
+          if (!userInputs.skipScenario5Min) {
+            await cleanupLimited(workingCopyId);
+            await wait(WAIT_TIME * 2);
+            await setValue('E17', 0, workingCopyId);
+            await writeFormula('C92', '=MAX(0, B92)', workingCopyId);
+            await setValue('C90', 0.3, workingCopyId);
+            await setValue('C88', 4.55, workingCopyId);
+            await setValue('G88', 0, workingCopyId);
+            await setValue('B43', 0, workingCopyId);
+            await setValue('F47', 0, workingCopyId);
+            await writeFormula('J124', '=I124', workingCopyId);
+            
+            const minOutputs = await getOutputs(workingCopyId);
+            const minCopyResult = await createWorkbookCopy(6, userInputs, workingCopyId);
+            minOutputs.fileName = minCopyResult.fileName || 'Scenario 6 Min';
+            scenario6.min = minOutputs;
+          } else {
+            scenario6.min = scenario6.max;
+          }
+          
+          results.scenario6 = scenario6;
+          break;
+      }
+      
+      currentScenario++;
+    }
+    
+    onProgress(100, 'Analysis complete!');
+    
+    return results;
+  } catch (error) {
+    console.error('Error running selected scenarios:', error);
+    throw error;
+  }
+}
+

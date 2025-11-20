@@ -4,7 +4,7 @@ import ProgressBar from './components/ProgressBar';
 import ResultsTable from './components/ResultsTable';
 import ActionButtons from './components/ActionButtons';
 import ErrorDisplay from './components/ErrorDisplay';
-import { runAllScenarios } from './services/googleSheetsService';
+import { runAllScenarios, runSelectedScenarios } from './services/googleSheetsService';
 
 const APP_STATE = {
   INPUT: 'input',
@@ -48,16 +48,16 @@ export default function App() {
 
     try {
       let scenarioResults;
-      if (scenarioOnly === 5) {
-        // Run only Scenario 5
-        const { runScenario5Only } = await import('./services/googleSheetsService');
-        scenarioResults = await runScenario5Only(formData, handleProgressUpdate);
-      } else if (scenarioOnly === 6) {
-        // Run only Scenario 6 (Donation + CTB)
-        const { runScenario6Only } = await import('./services/googleSheetsService');
-        scenarioResults = await runScenario6Only(formData, handleProgressUpdate);
+      
+      // Check if we have selected scenarios (new checkbox system)
+      if (formData.selectedScenarios !== undefined) {
+        scenarioResults = await runSelectedScenarios(
+          formData, 
+          formData.selectedScenarios, 
+          handleProgressUpdate
+        );
       } else {
-        // Run all scenarios
+        // Fallback to old system (shouldn't happen with new UI, but keeps compatibility)
         const { runAllScenarios } = await import('./services/googleSheetsService');
         scenarioResults = await runAllScenarios(formData, handleProgressUpdate);
       }

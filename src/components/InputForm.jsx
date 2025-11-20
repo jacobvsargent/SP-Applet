@@ -12,6 +12,14 @@ export default function InputForm({ onSubmit }) {
     skipScenario5Min: false
   });
 
+  const [selectedScenarios, setSelectedScenarios] = useState({
+    scenario2: false,  // Solar Only
+    scenario3: false,  // Donation Only
+    scenario4: false,  // Solar + Donation - No Refund
+    scenario5: false,  // Solar + Donation - With Refund
+    scenario6: false   // Donation + CTB
+  });
+
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
@@ -123,10 +131,21 @@ export default function InputForm({ onSubmit }) {
         avgIncome: parseCurrency(formData.avgIncome),
         state: formData.state,
         filingStatus: formData.filingStatus,
-        skipScenario5Min: formData.skipScenario5Min
+        skipScenario5Min: formData.skipScenario5Min,
+        selectedScenarios: Object.keys(selectedScenarios)
+          .filter(key => selectedScenarios[key])
+          .map(key => parseInt(key.replace('scenario', '')))  // Convert to [2, 3, 5] format
       };
       onSubmit(submissionData);
     }
+  };
+
+  const handleScenarioCheckbox = (e) => {
+    const { name, checked } = e.target;
+    setSelectedScenarios(prev => ({
+      ...prev,
+      [name]: checked
+    }));
   };
 
   const isFormValid = () => {
@@ -252,58 +271,86 @@ export default function InputForm({ onSubmit }) {
         </div>
       </div>
 
+      {/* Scenario Selection Checkboxes */}
+      <div style={{ 
+        marginTop: '30px', 
+        padding: '20px', 
+        border: '2px solid #ddd', 
+        borderRadius: '8px',
+        backgroundColor: '#f9f9f9'
+      }}>
+        <h3 style={{ marginTop: 0, marginBottom: '15px', fontSize: '16px', color: '#333' }}>
+          Select Scenarios to Run:
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              name="scenario2"
+              checked={selectedScenarios.scenario2}
+              onChange={handleScenarioCheckbox}
+              style={{ marginRight: '10px', cursor: 'pointer', width: '18px', height: '18px' }}
+            />
+            <span style={{ fontSize: '14px', fontWeight: '500' }}>Solar Only</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              name="scenario3"
+              checked={selectedScenarios.scenario3}
+              onChange={handleScenarioCheckbox}
+              style={{ marginRight: '10px', cursor: 'pointer', width: '18px', height: '18px' }}
+            />
+            <span style={{ fontSize: '14px', fontWeight: '500' }}>Donation Only</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              name="scenario4"
+              checked={selectedScenarios.scenario4}
+              onChange={handleScenarioCheckbox}
+              style={{ marginRight: '10px', cursor: 'pointer', width: '18px', height: '18px' }}
+            />
+            <span style={{ fontSize: '14px', fontWeight: '500' }}>Solar + Donation (No Refund)</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              name="scenario5"
+              checked={selectedScenarios.scenario5}
+              onChange={handleScenarioCheckbox}
+              style={{ marginRight: '10px', cursor: 'pointer', width: '18px', height: '18px' }}
+            />
+            <span style={{ fontSize: '14px', fontWeight: '500' }}>Solar + Donation (With Refund)</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              name="scenario6"
+              checked={selectedScenarios.scenario6}
+              onChange={handleScenarioCheckbox}
+              style={{ marginRight: '10px', cursor: 'pointer', width: '18px', height: '18px' }}
+            />
+            <span style={{ fontSize: '14px', fontWeight: '500' }}>Donation + CTB</span>
+          </label>
+        </div>
+        <div style={{ 
+          marginTop: '10px', 
+          fontSize: '12px', 
+          color: '#666', 
+          fontStyle: 'italic' 
+        }}>
+          Note: Baseline (Do Nothing) scenario will always run for comparison.
+        </div>
+      </div>
+
       <button 
         type="submit" 
         className="btn-primary"
         disabled={!isFormValid()}
+        style={{ marginTop: '20px' }}
       >
-        Run Full Analysis (Solar + Donation)
-      </button>
-
-      <button 
-        type="button"
-        className="btn-secondary"
-        style={{ width: '100%', marginTop: '10px' }}
-        disabled={!isFormValid()}
-        onClick={(e) => {
-          e.preventDefault();
-          if (isFormValid()) {
-            const submissionData = {
-              name: formData.name.trim(),
-              income: parseCurrency(formData.income),
-              avgIncome: parseCurrency(formData.avgIncome),
-              state: formData.state,
-              filingStatus: formData.filingStatus,
-              skipScenario5Min: formData.skipScenario5Min
-            };
-            onSubmit(submissionData, 5);
-          }
-        }}
-      >
-        Run Scenario 5 Only (Maximum Savings Only)
-      </button>
-
-      <button 
-        type="button"
-        className="btn-secondary"
-        style={{ width: '100%', marginTop: '10px', backgroundColor: '#6c757d' }}
-        disabled={!isFormValid()}
-        onClick={(e) => {
-          e.preventDefault();
-          if (isFormValid()) {
-            const submissionData = {
-              name: formData.name.trim(),
-              income: parseCurrency(formData.income),
-              avgIncome: parseCurrency(formData.avgIncome),
-              state: formData.state,
-              filingStatus: formData.filingStatus,
-              skipScenario5Min: formData.skipScenario5Min
-            };
-            onSubmit(submissionData, 6);
-          }
-        }}
-      >
-        Run Donation + CTB Only
+        Run Scenarios
       </button>
 
       <div className="disclaimer">

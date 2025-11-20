@@ -392,26 +392,26 @@ function createWorkbookCopy(scenarioNumber, userInputs, workingCopyId) {
     const originalActiveSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     SpreadsheetApp.setActiveSpreadsheet(ss);
     
-    // Use nameFile function from Addon.gs to generate filename
-    let copyName;
+    // First, get the filename string for the response (hover display)
+    let displayFileName;
     try {
-      copyName = nameFile(true);  // returnOnly = true to just get the name
-      Logger.log('Generated filename from nameFile: ' + copyName);
+      displayFileName = nameFile(true);  // returnOnly = true to get the name string
+      Logger.log('Generated display filename from nameFile(true): ' + displayFileName);
       
-      if (!copyName || copyName === null || copyName === '') {
+      if (!displayFileName || displayFileName === null || displayFileName === '') {
         // Fallback if nameFile fails
-        copyName = userInputs.name + ' - ' + scenarioNumber;
-        Logger.log('Using fallback filename: ' + copyName);
+        displayFileName = userInputs.name + ' - Scenario ' + scenarioNumber;
+        Logger.log('Using fallback display filename: ' + displayFileName);
       }
     } catch (error) {
-      Logger.log('Error calling nameFile: ' + error.toString());
+      Logger.log('Error calling nameFile(true): ' + error.toString());
       // Fallback filename
-      copyName = userInputs.name + ' - ' + scenarioNumber;
-      Logger.log('Using fallback filename due to error: ' + copyName);
-    } finally {
-      // Restore original active spreadsheet
-      SpreadsheetApp.setActiveSpreadsheet(originalActiveSpreadsheet);
+      displayFileName = userInputs.name + ' - Scenario ' + scenarioNumber;
+      Logger.log('Using fallback display filename due to error: ' + displayFileName);
     }
+    
+    // Restore original active spreadsheet
+    SpreadsheetApp.setActiveSpreadsheet(originalActiveSpreadsheet);
     
     const originalFile = DriveApp.getFileById(ss.getId());
     // Use specific folder ID instead of parent folder
@@ -419,8 +419,7 @@ function createWorkbookCopy(scenarioNumber, userInputs, workingCopyId) {
     
     Logger.log('Parent folder name: ' + parentFolder.getName());
     
-    // Create timestamp for file naming and date for folder
-    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HHmmss");
+    // Create timestamp for date for folder
     const dateOnly = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
     
     // Format income for folder name (e.g., $75000 -> $75k)
@@ -449,13 +448,31 @@ function createWorkbookCopy(scenarioNumber, userInputs, workingCopyId) {
       Logger.log('Created new folder: ' + analysisFolder.getId());
     }
     
-    // Add timestamp to filename
-    copyName = `${copyName} - ${timestamp}`;
-    
-    Logger.log('Creating workbook copy: ' + copyName);
+    Logger.log('Creating workbook copy...');
     
     // Make a copy of the entire workbook (keeping all formulas intact)
-    const copiedFile = originalFile.makeCopy(copyName, analysisFolder);
+    // Initially create with a temporary name
+    const tempName = 'temp_' + new Date().getTime();
+    const copiedFile = originalFile.makeCopy(tempName, analysisFolder);
+    
+    Logger.log('Workbook copied, now naming it with nameFile(false)...');
+    
+    // Now set the copied file as active and call nameFile(false) to name it
+    const copiedSpreadsheet = SpreadsheetApp.openById(copiedFile.getId());
+    SpreadsheetApp.setActiveSpreadsheet(copiedSpreadsheet);
+    
+    try {
+      nameFile(false);  // returnOnly = false to actually rename the file
+      Logger.log('File renamed using nameFile(false)');
+    } catch (error) {
+      Logger.log('Error calling nameFile(false): ' + error.toString());
+      // If nameFile(false) fails, at least use the display name
+      copiedFile.setName(displayFileName);
+      Logger.log('Used display filename as fallback for file name');
+    } finally {
+      // Restore original active spreadsheet
+      SpreadsheetApp.setActiveSpreadsheet(originalActiveSpreadsheet);
+    }
     
     Logger.log('Workbook copied successfully with formulas preserved');
     
@@ -489,12 +506,11 @@ function createWorkbookCopy(scenarioNumber, userInputs, workingCopyId) {
     
     return {
       success: true,
-      fileName: copyName,
+      fileName: displayFileName,
       folderName: folderName,
       folderId: analysisFolder.getId(),
       folderUrl: analysisFolder.getUrl(),
-      fileUrl: copiedFile.getUrl(),
-      timestamp: timestamp
+      fileUrl: copiedFile.getUrl()
     };
   } catch (error) {
     Logger.log('ERROR in createWorkbookCopy: ' + error.toString());
