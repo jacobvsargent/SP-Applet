@@ -362,17 +362,40 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
           <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '16px' }}>Analysis for: {userInputs.name}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', fontSize: '14px' }}>
             <div>
-              <strong>Annual Income:</strong> {formatCurrency(userInputs.income)}
+              <strong>2025 Ordinary Income:</strong> {formatCurrency(userInputs.income)}
             </div>
-            <div>
-              <strong>Average Income (3 Years):</strong> {formatCurrency(userInputs.avgIncome)}
-            </div>
+            {userInputs.capitalGains && (
+              <div>
+                <strong>2025 Long-term Capital Gains:</strong> {formatCurrency(userInputs.capitalGains)}
+              </div>
+            )}
+            {userInputs.avgIncome && (
+              <div>
+                <strong>Estimated 2022 Income:</strong> {formatCurrency(userInputs.avgIncome)}
+              </div>
+            )}
+            {userInputs.knownFederalTax && (
+              <div>
+                <strong>Known 2022 Federal Tax Paid:</strong> {formatCurrency(userInputs.knownFederalTax)}
+              </div>
+            )}
             <div>
               <strong>State of Residence:</strong> {userInputs.state}
             </div>
             <div>
               <strong>Filing Status:</strong> {userInputs.filingStatus}
             </div>
+            {userInputs.donationPreference && (
+              <div>
+                <strong>Donation Strategy:</strong> {
+                  userInputs.donationPreference === 'land' ? 'Land (30%)' :
+                  userInputs.donationPreference === 'medtech' ? 'Medtech (60%)' :
+                  userInputs.donationPreference === 'both' ? 'Both (Range)' :
+                  userInputs.donationPreference === 'both-separate' ? 'Both (Separate)' :
+                  userInputs.donationPreference
+                }
+              </div>
+            )}
           </div>
         </div>
       )}
