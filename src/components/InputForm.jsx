@@ -9,7 +9,7 @@ export default function InputForm({ onSubmit }) {
     avgIncome: '',
     state: '',
     filingStatus: '',
-    skipScenario5Min: false
+    donationPreference: 'both'  // 'land', 'medtech', or 'both'
   });
 
   const [selectedScenarios, setSelectedScenarios] = useState({
@@ -131,7 +131,7 @@ export default function InputForm({ onSubmit }) {
         avgIncome: parseCurrency(formData.avgIncome),
         state: formData.state,
         filingStatus: formData.filingStatus,
-        skipScenario5Min: formData.skipScenario5Min,
+        donationPreference: formData.donationPreference,
         selectedScenarios: Object.keys(selectedScenarios)
           .filter(key => selectedScenarios[key])
           .map(key => parseInt(key.replace('scenario', '')))  // Convert to [2, 3, 5] format
@@ -255,19 +255,94 @@ export default function InputForm({ onSubmit }) {
         )}
       </div>
 
+      {/* Donation Strategy Selection */}
       <div className="form-group" style={{ marginTop: '20px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'normal' }}>
-          <input
-            type="checkbox"
-            name="skipScenario5Min"
-            checked={formData.skipScenario5Min}
-            onChange={handleChange}
-            style={{ marginRight: '8px', width: 'auto', cursor: 'pointer' }}
-          />
-          <span>Skip 30% donation calculation for all scenarios (faster results)</span>
+        <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+          Donation Strategy
         </label>
-        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', marginLeft: '24px' }}>
-          When checked, all donation scenarios will only show the maximum (60% donation) result instead of a range.
+        <div style={{ 
+          display: 'flex', 
+          gap: '12px', 
+          padding: '12px',
+          backgroundColor: '#f5f5f5',
+          borderRadius: '8px',
+          border: '1px solid #ddd'
+        }}>
+          <label style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            cursor: 'pointer',
+            padding: '8px 16px',
+            backgroundColor: formData.donationPreference === 'land' ? '#4CAF50' : 'white',
+            color: formData.donationPreference === 'land' ? 'white' : '#333',
+            borderRadius: '6px',
+            border: '2px solid ' + (formData.donationPreference === 'land' ? '#4CAF50' : '#ddd'),
+            fontWeight: '500',
+            transition: 'all 0.2s',
+            flex: 1,
+            justifyContent: 'center'
+          }}>
+            <input
+              type="radio"
+              name="donationPreference"
+              value="land"
+              checked={formData.donationPreference === 'land'}
+              onChange={handleChange}
+              style={{ marginRight: '8px' }}
+            />
+            Land (30%)
+          </label>
+          <label style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            cursor: 'pointer',
+            padding: '8px 16px',
+            backgroundColor: formData.donationPreference === 'medtech' ? '#2196F3' : 'white',
+            color: formData.donationPreference === 'medtech' ? 'white' : '#333',
+            borderRadius: '6px',
+            border: '2px solid ' + (formData.donationPreference === 'medtech' ? '#2196F3' : '#ddd'),
+            fontWeight: '500',
+            transition: 'all 0.2s',
+            flex: 1,
+            justifyContent: 'center'
+          }}>
+            <input
+              type="radio"
+              name="donationPreference"
+              value="medtech"
+              checked={formData.donationPreference === 'medtech'}
+              onChange={handleChange}
+              style={{ marginRight: '8px' }}
+            />
+            Medtech (60%)
+          </label>
+          <label style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            cursor: 'pointer',
+            padding: '8px 16px',
+            backgroundColor: formData.donationPreference === 'both' ? '#FF9800' : 'white',
+            color: formData.donationPreference === 'both' ? 'white' : '#333',
+            borderRadius: '6px',
+            border: '2px solid ' + (formData.donationPreference === 'both' ? '#FF9800' : '#ddd'),
+            fontWeight: '500',
+            transition: 'all 0.2s',
+            flex: 1,
+            justifyContent: 'center'
+          }}>
+            <input
+              type="radio"
+              name="donationPreference"
+              value="both"
+              checked={formData.donationPreference === 'both'}
+              onChange={handleChange}
+              style={{ marginRight: '8px' }}
+            />
+            Both
+          </label>
+        </div>
+        <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+          Choose which donation calculations to run. "Both" will show a range (min/max) in results.
         </div>
       </div>
 
