@@ -7,6 +7,7 @@ export default function InputForm({ onSubmit }) {
     name: '',
     income: '',
     avgIncome: '',
+    knownFederalTax: '',
     state: '',
     filingStatus: '',
     donationPreference: 'both'  // 'land', 'medtech', or 'both'
@@ -32,11 +33,19 @@ export default function InputForm({ onSubmit }) {
         return '';
       
       case 'income':
-      case 'avgIncome':
         if (!value || value.trim() === '') {
           return 'This field is required';
         }
         if (!isValidCurrency(value)) {
+          return 'Please enter a valid number (e.g., $75,000 or 75000)';
+        }
+        return '';
+      
+      case 'avgIncome':
+      case 'knownFederalTax':
+        // These fields are optional individually, but at least one must be filled
+        // Validation handled in validateForm()
+        if (value && value.trim() !== '' && !isValidCurrency(value)) {
           return 'Please enter a valid number (e.g., $75,000 or 75000)';
         }
         return '';
@@ -89,7 +98,7 @@ export default function InputForm({ onSubmit }) {
     }));
 
     // Format currency fields
-    if ((name === 'income' || name === 'avgIncome') && value && isValidCurrency(value)) {
+    if ((name === 'income' || name === 'avgIncome' || name === 'knownFederalTax') && value && isValidCurrency(value)) {
       const numericValue = parseCurrency(value);
       const formatted = formatCurrencyInput(numericValue);
       setFormData(prev => ({
@@ -107,6 +116,16 @@ export default function InputForm({ onSubmit }) {
         newErrors[key] = error;
       }
     });
+    
+    // Special validation: At least one of avgIncome or knownFederalTax must be filled
+    const hasAvgIncome = formData.avgIncome && formData.avgIncome.trim() !== '';
+    const hasKnownTax = formData.knownFederalTax && formData.knownFederalTax.trim() !== '';
+    
+    if (!hasAvgIncome && !hasKnownTax) {
+      newErrors.avgIncome = 'Either Estimated 2022 Income or Known 2022 Federal Tax Paid is required';
+      newErrors.knownFederalTax = 'Either Estimated 2022 Income or Known 2022 Federal Tax Paid is required';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -128,7 +147,8 @@ export default function InputForm({ onSubmit }) {
       const submissionData = {
         name: formData.name.trim(),
         income: parseCurrency(formData.income),
-        avgIncome: parseCurrency(formData.avgIncome),
+        avgIncome: formData.avgIncome ? parseCurrency(formData.avgIncome) : null,
+        knownFederalTax: formData.knownFederalTax ? parseCurrency(formData.knownFederalTax) : null,
         state: formData.state,
         filingStatus: formData.filingStatus,
         donationPreference: formData.donationPreference,
@@ -149,12 +169,23 @@ export default function InputForm({ onSubmit }) {
   };
 
   const isFormValid = () => {
-    // Check only the required fields (not the checkbox)
-    const requiredFields = ['name', 'income', 'avgIncome', 'state', 'filingStatus'];
-    return requiredFields.every(key => {
+    // Check required fields
+    const alwaysRequired = ['name', 'income', 'state', 'filingStatus'];
+    const allRequiredValid = alwaysRequired.every(key => {
       const value = formData[key];
       return value && value !== '' && !validateField(key, value);
     });
+    
+    // Check that at least one of avgIncome or knownFederalTax is filled
+    const hasAvgIncome = formData.avgIncome && formData.avgIncome.trim() !== '';
+    const hasKnownTax = formData.knownFederalTax && formData.knownFederalTax.trim() !== '';
+    const hasAtLeastOne = hasAvgIncome || hasKnownTax;
+    
+    // Check no errors in the filled optional fields
+    const avgIncomeValid = !hasAvgIncome || !validateField('avgIncome', formData.avgIncome);
+    const knownTaxValid = !hasKnownTax || !validateField('knownFederalTax', formData.knownFederalTax);
+    
+    return allRequiredValid && hasAtLeastOne && avgIncomeValid && knownTaxValid;
   };
 
   return (
@@ -177,7 +208,7 @@ export default function InputForm({ onSubmit }) {
       </div>
 
       <div className="form-group">
-        <label htmlFor="income">Annual Income</label>
+        <label htmlFor="income">2025 Ordinary Income</label>
         <input
           type="text"
           id="income"
@@ -193,21 +224,41 @@ export default function InputForm({ onSubmit }) {
         )}
       </div>
 
-      <div className="form-group">
-        <label htmlFor="avgIncome">Estimated 2022 Income</label>
-        <input
-          type="text"
-          id="avgIncome"
-          name="avgIncome"
-          value={formData.avgIncome}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          placeholder="e.g., $70,000 or 70000"
-          className={errors.avgIncome && touched.avgIncome ? 'error' : ''}
-        />
-        {errors.avgIncome && touched.avgIncome && (
-          <div className="error-message">{errors.avgIncome}</div>
-        )}
+      {/* Side-by-side fields: avgIncome and knownFederalTax */}
+      <div style={{ display: 'flex', gap: '16px' }}>
+        <div className="form-group" style={{ flex: 1 }}>
+          <label htmlFor="avgIncome">Estimated 2022 Income</label>
+          <input
+            type="text"
+            id="avgIncome"
+            name="avgIncome"
+            value={formData.avgIncome}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder="e.g., $70,000 or 70000"
+            className={errors.avgIncome && touched.avgIncome ? 'error' : ''}
+          />
+          {errors.avgIncome && touched.avgIncome && (
+            <div className="error-message">{errors.avgIncome}</div>
+          )}
+        </div>
+
+        <div className="form-group" style={{ flex: 1 }}>
+          <label htmlFor="knownFederalTax">Known 2022 Federal Tax Paid</label>
+          <input
+            type="text"
+            id="knownFederalTax"
+            name="knownFederalTax"
+            value={formData.knownFederalTax}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder="e.g., $20,000 or 20000"
+            className={errors.knownFederalTax && touched.knownFederalTax ? 'error' : ''}
+          />
+          {errors.knownFederalTax && touched.knownFederalTax && (
+            <div className="error-message">{errors.knownFederalTax}</div>
+          )}
+        </div>
       </div>
 
       <div className="form-group">

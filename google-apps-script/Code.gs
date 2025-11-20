@@ -175,11 +175,24 @@ function setUserInputs(data) {
   sheet.getRange('C4').setValue(data.income);
   sheet.getRange('B4').setValue(data.state);
   sheet.getRange('B9').setValue(data.filingStatus);
-  sheet.getRange('G4').setValue(data.avgIncome);
+  
+  // Handle avgIncome and knownFederalTax - write to G10
+  if (data.avgIncome) {
+    sheet.getRange('G10').setValue(data.avgIncome);
+    Logger.log('🔍 Set avgIncome to G10: ' + data.avgIncome);
+  }
+  
+  // If knownFederalTax is provided, it overrides avgIncome in G10
+  if (data.knownFederalTax) {
+    sheet.getRange('G10').setValue(data.knownFederalTax);
+    Logger.log('🔍 Set knownFederalTax to G10 (overriding avgIncome): ' + data.knownFederalTax);
+  }
+  
   sheet.getRange('Q5').setValue(data.name);  // Set client name
   
   Logger.log('🔍 Values set successfully. Verifying C4 = ' + sheet.getRange('C4').getValue());
   Logger.log('🔍 Verifying Q5 = ' + sheet.getRange('Q5').getValue());
+  Logger.log('🔍 Verifying G10 = ' + sheet.getRange('G10').getValue());
   
   // Force calculation and wait for it to settle
   SpreadsheetApp.flush();
