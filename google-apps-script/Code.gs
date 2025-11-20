@@ -151,30 +151,16 @@ function doGet(e) {
  * @param {object} data - Contains income, avgIncome, state, filingStatus, and optional workingCopyId
  */
 function setUserInputs(data) {
-  Logger.log('🔍 setUserInputs called with workingCopyId: ' + data.workingCopyId);
-  Logger.log('🔍 Data object: ' + JSON.stringify(data));
-  Logger.log('🔍 Checking specific fields:');
-  Logger.log('🔍   - data.avgIncome = ' + data.avgIncome + ' (type: ' + typeof data.avgIncome + ')');
-  Logger.log('🔍   - data.knownFederalTax = ' + data.knownFederalTax + ' (type: ' + typeof data.knownFederalTax + ')');
-  Logger.log('🔍   - data.income = ' + data.income);
-  Logger.log('🔍   - data.capitalGains = ' + data.capitalGains);
   
-  // Use working copy if provided, otherwise use active spreadsheet (master)
   const ss = data.workingCopyId 
     ? SpreadsheetApp.openById(data.workingCopyId)
     : SpreadsheetApp.getActiveSpreadsheet();
-  
-  Logger.log('🔍 Using spreadsheet: ' + ss.getName() + ' (ID: ' + ss.getId() + ')');
-  Logger.log('🔍 Spreadsheet URL: ' + ss.getUrl());
     
   const sheet = ss.getSheetByName('Blended Solution Calculator');
   
   if (!sheet) {
     throw new Error('Sheet "Blended Solution Calculator" not found');
   }
-  
-  Logger.log('🔍 About to set income: ' + data.income + ' to cell C4');
-  Logger.log('🔍 About to set name: ' + data.name + ' to cell Q5');
   
   // Set the values in the appropriate cells
   sheet.getRange('C4').setValue(data.income);
@@ -184,70 +170,30 @@ function setUserInputs(data) {
   // Handle capitalGains - write to C9 (optional)
   if (data.capitalGains) {
     sheet.getRange('C9').setValue(data.capitalGains);
-    Logger.log('🔍 Set capitalGains to C9: ' + data.capitalGains);
   }
   
-  // Handle avgIncome - write to G4, wait, then copy G6 to G10
-  if (data.avgIncome) {
-    Logger.log('🔍 === STARTING avgIncome PROCESSING ===');
-    Logger.log('🔍 Input avgIncome value: ' + data.avgIncome);
-    
-    // Step 1: Write avgIncome to G4
-    sheet.getRange('G4').setValue(data.avgIncome);
-    Logger.log('🔍 Step 1: Wrote ' + data.avgIncome + ' to G4');
-    Logger.log('🔍 Verifying G4 now contains: ' + sheet.getRange('G4').getValue());
-    
-    // Step 2: Wait a beat for sheet to recalculate
-    SpreadsheetApp.flush();
-    Utilities.sleep(1000);  // Wait 1 second
-    Logger.log('🔍 Step 2: Waited 1 second for sheet recalculation');
-    
-    // Step 3: Read value from G6
-    const g6Value = sheet.getRange('G6').getValue();
-    Logger.log('🔍 Step 3: Read value from G6: ' + g6Value);
-    
-    // Step 4: Write G6 value to G10
-    sheet.getRange('G10').setValue(g6Value);
-    Logger.log('🔍 Step 4: Wrote G6 value (' + g6Value + ') to G10');
-    Logger.log('🔍 Verifying G10 now contains: ' + sheet.getRange('G10').getValue());
-    Logger.log('🔍 === COMPLETED avgIncome PROCESSING ===');
-  }
-  
-  // If knownFederalTax is provided, it overrides whatever is in G10
+  // Handle G10 population: knownFederalTax takes priority over avgIncome
   if (data.knownFederalTax) {
-    Logger.log('🔍 === STARTING knownFederalTax PROCESSING ===');
-    Logger.log('🔍 Input knownFederalTax value: ' + data.knownFederalTax);
-    Logger.log('🔍 Current G10 value before override: ' + sheet.getRange('G10').getValue());
-    Logger.log('🔍 Current G10 formula before override: ' + sheet.getRange('G10').getFormula());
-    
-    // DIAGNOSTIC: Write to H10 to verify we're receiving the data
-    sheet.getRange('H10').setValue('KnownTax: ' + data.knownFederalTax);
-    
-    // Clear any existing formula first
+    // If knownFederalTax is provided, use it directly (skip avgIncome processing)
     sheet.getRange('G10').clearContent();
     SpreadsheetApp.flush();
-    Utilities.sleep(500);  // Extra wait
+    Utilities.sleep(500);
     
-    // Then set the value as a NUMBER (not string)
     const taxValue = Number(data.knownFederalTax);
     sheet.getRange('G10').setValue(taxValue);
     SpreadsheetApp.flush();
-    Utilities.sleep(500);  // Extra wait
+    Utilities.sleep(500);
+  } else if (data.avgIncome) {
+    // Only process avgIncome if knownFederalTax is NOT provided
+    sheet.getRange('G4').setValue(data.avgIncome);
+    SpreadsheetApp.flush();
+    Utilities.sleep(1000);  // Wait for sheet to recalculate
     
-    Logger.log('🔍 Wrote knownFederalTax to G10: ' + taxValue);
-    Logger.log('🔍 Verifying G10 now contains: ' + sheet.getRange('G10').getValue());
-    Logger.log('🔍 Verifying G10 formula is now: ' + sheet.getRange('G10').getFormula());
-    Logger.log('🔍 === COMPLETED knownFederalTax PROCESSING ===');
-  } else {
-    Logger.log('⚠️ knownFederalTax was NOT provided or is falsy');
-    Logger.log('⚠️ data.knownFederalTax = ' + data.knownFederalTax);
+    const g6Value = sheet.getRange('G6').getValue();
+    sheet.getRange('G10').setValue(g6Value);
   }
   
   sheet.getRange('Q5').setValue(data.name);  // Set client name
-  
-  Logger.log('🔍 Values set successfully. Verifying C4 = ' + sheet.getRange('C4').getValue());
-  Logger.log('🔍 Verifying Q5 = ' + sheet.getRange('Q5').getValue());
-  Logger.log('🔍 Verifying G10 = ' + sheet.getRange('G10').getValue());
   
   // Force calculation and wait for it to settle
   SpreadsheetApp.flush();
