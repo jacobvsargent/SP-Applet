@@ -37,7 +37,7 @@ export default function ProgressBar({ progress, message, startTime }) {
             left: `${progress}%`,
             top: '50%',
             transform: 'translate(-50%, -50%)',
-            fontSize: '24px',
+            fontSize: '29px',
             transition: 'left 0.3s ease',
             filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))'
           }}>

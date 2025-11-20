@@ -143,6 +143,13 @@ export async function deleteWorkingCopy(workingCopyId) {
  */
 export async function setUserInputs(inputs, workingCopyId = null) {
   const data = workingCopyId ? { ...inputs, workingCopyId } : inputs;
+  console.log('📤 setUserInputs - Sending to backend:', {
+    avgIncome: data.avgIncome,
+    knownFederalTax: data.knownFederalTax,
+    hasAvgIncome: !!data.avgIncome,
+    hasKnownTax: !!data.knownFederalTax,
+    fullData: data
+  });
   await makeRequest('setInputs', data);
   await wait(WAIT_TIME);
 }
