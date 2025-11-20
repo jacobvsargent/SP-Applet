@@ -320,7 +320,7 @@ export default function InputForm({ onSubmit }) {
             display: 'flex', 
             alignItems: 'center', 
             cursor: 'pointer',
-            padding: '8px 16px',
+            padding: '8px 12px',
             backgroundColor: formData.donationPreference === 'both' ? '#FF9800' : 'white',
             color: formData.donationPreference === 'both' ? 'white' : '#333',
             borderRadius: '6px',
@@ -338,11 +338,35 @@ export default function InputForm({ onSubmit }) {
               onChange={handleChange}
               style={{ marginRight: '8px' }}
             />
-            Both
+            Both (Range)
+          </label>
+          <label style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            cursor: 'pointer',
+            padding: '8px 12px',
+            backgroundColor: formData.donationPreference === 'both-separate' ? '#9C27B0' : 'white',
+            color: formData.donationPreference === 'both-separate' ? 'white' : '#333',
+            borderRadius: '6px',
+            border: '2px solid ' + (formData.donationPreference === 'both-separate' ? '#9C27B0' : '#ddd'),
+            fontWeight: '500',
+            transition: 'all 0.2s',
+            flex: 1,
+            justifyContent: 'center'
+          }}>
+            <input
+              type="radio"
+              name="donationPreference"
+              value="both-separate"
+              checked={formData.donationPreference === 'both-separate'}
+              onChange={handleChange}
+              style={{ marginRight: '8px' }}
+            />
+            Both (Separate)
           </label>
         </div>
         <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
-          Choose which donation calculations to run. "Both" will show a range (min/max) in results.
+          Choose donation calculations: Single type, Range (min-max), or Separate rows for each.
         </div>
       </div>
 

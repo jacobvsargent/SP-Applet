@@ -585,7 +585,7 @@ export async function runScenario5Only(userInputs, onProgress) {
     }
     
     // Run Scenario 5 Min (30% - Land) if not skipped and not completed
-    if (userInputs.donationPreference !== 'both') {
+    if (userInputs.donationPreference !== 'both' && userInputs.donationPreference !== 'both-separate') {
       scenario5.min = scenario5.max;
     } else if (completed.scenario5_min) {
       console.log('✅ Using cached Scenario 5 Min');
@@ -716,7 +716,7 @@ export async function runScenario6Only(userInputs, onProgress) {
     }
     
     // Scenario 3 Min (30% - Land)
-    if (userInputs.donationPreference !== 'both') {
+    if (userInputs.donationPreference !== 'both' && userInputs.donationPreference !== 'both-separate') {
       scenario3.min = scenario3.max;
     } else if (completed.scenario3_min) {
       console.log('✅ Using cached Scenario 3 Min');
@@ -783,7 +783,7 @@ export async function runScenario6Only(userInputs, onProgress) {
     }
     
     // Run Scenario 6 Min (30% - Land) if not skipped and not completed
-    if (userInputs.donationPreference !== 'both') {
+    if (userInputs.donationPreference !== 'both' && userInputs.donationPreference !== 'both-separate') {
       scenario6.min = scenario6.max;
     } else if (completed.scenario6_min) {
       console.log('✅ Using cached Scenario 6 Min');
@@ -958,7 +958,7 @@ export async function runAllScenarios(userInputs, onProgress) {
     }
     
     // Scenario 3 Min (30% - Land)
-    if (userInputs.donationPreference !== 'both') {
+    if (userInputs.donationPreference !== 'both' && userInputs.donationPreference !== 'both-separate') {
       scenario3.min = scenario3.max;
     } else if (completed.scenario3_min) {
       console.log('✅ Using cached Scenario 3 Min');
@@ -1007,7 +1007,7 @@ export async function runAllScenarios(userInputs, onProgress) {
     }
     
     // Scenario 4 Min (30% - Land)
-    if (userInputs.donationPreference !== 'both') {
+    if (userInputs.donationPreference !== 'both' && userInputs.donationPreference !== 'both-separate') {
       scenario4.min = scenario4.max;
     } else if (completed.scenario4_min) {
       console.log('✅ Using cached Scenario 4 Min');
@@ -1173,7 +1173,7 @@ export async function runSelectedScenarios(userInputs, selectedScenarios, onProg
         case 3:  // Donation Only
           onProgress(progress, 'Running Donation Only...');
           
-          if (userInputs.donationPreference === 'both') {
+          if (userInputs.donationPreference === 'both' || userInputs.donationPreference === 'both-separate') {
             // Run both Land and Medtech
             const scenario3 = {};
             
@@ -1225,7 +1225,7 @@ export async function runSelectedScenarios(userInputs, selectedScenarios, onProg
         case 4:  // Solar + Donation (No Refund)
           onProgress(progress, 'Running Solar + Donation (No Refund)...');
           
-          if (userInputs.donationPreference === 'both') {
+          if (userInputs.donationPreference === 'both' || userInputs.donationPreference === 'both-separate') {
             // Run both Land and Medtech
             const scenario4 = {};
             
@@ -1277,7 +1277,7 @@ export async function runSelectedScenarios(userInputs, selectedScenarios, onProg
         case 5:  // Solar + Donation (With Refund)
           onProgress(progress, 'Running Solar + Donation (With Refund)...');
           
-          if (userInputs.donationPreference === 'both') {
+          if (userInputs.donationPreference === 'both' || userInputs.donationPreference === 'both-separate') {
             // Run both Land and Medtech
             const scenario5 = {};
             
@@ -1329,7 +1329,7 @@ export async function runSelectedScenarios(userInputs, selectedScenarios, onProg
         case 6:  // Donation + CTB
           onProgress(progress, 'Running Donation + CTB...');
           
-          if (userInputs.donationPreference === 'both') {
+          if (userInputs.donationPreference === 'both' || userInputs.donationPreference === 'both-separate') {
             // Run both Land and Medtech
             const scenario6 = {};
             

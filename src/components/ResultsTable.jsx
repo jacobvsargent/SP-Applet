@@ -75,116 +75,235 @@ export default function ResultsTable({ results, userInputs, elapsedTime }) {
     return numValue > 0 ? 'value-positive' : numValue < 0 ? 'value-negative' : 'value-neutral';
   };
 
-  // Filter out null scenarios (for when only scenario 5 or 6 is run)
-  const allRows = [
-    {
-      scenario: SCENARIOS.DO_NOTHING,
-      data: results.scenario1,
-      fileName: results.scenario1?.fileName
-    },
-    {
-      scenario: SCENARIOS.SOLAR_ONLY,
-      data: results.scenario2,
-      fileName: results.scenario2?.fileName
-    },
-    {
-      scenario: SCENARIOS.DONATION_ONLY,
-      data: results.scenario3 ? (
-        (results.scenario3.min && results.scenario3.max) ? {
-          // Range format (both land and medtech)
-          agi: {
-            min: results.scenario3.min.agi,
-            max: results.scenario3.max.agi
-          },
-          totalTaxDue: {
-            min: results.scenario3.min.totalTaxDue,
-            max: results.scenario3.max.totalTaxDue
-          },
-          totalNetGain: {
-            min: results.scenario3.min.totalNetGain,
-            max: results.scenario3.max.totalNetGain
+  /**
+   * Helper function to replace "Donation" with donation type in scenario name
+   */
+  const replaceDonationType = (scenarioName, donationType) => {
+    return scenarioName.replace('Donation', donationType === 'land' ? 'Land' : 'Medtech');
+  };
+
+  /**
+   * Build rows, potentially splitting donation scenarios if both-separate is selected
+   */
+  const buildAllRows = () => {
+    const isSeparate = userInputs.donationPreference === 'both-separate';
+    const rows = [];
+
+    // Scenario 1: Do Nothing (always single)
+    if (results.scenario1) {
+      rows.push({
+        scenario: SCENARIOS.DO_NOTHING,
+        data: results.scenario1,
+        fileName: results.scenario1?.fileName
+      });
+    }
+
+    // Scenario 2: Solar Only (always single)
+    if (results.scenario2) {
+      rows.push({
+        scenario: SCENARIOS.SOLAR_ONLY,
+        data: results.scenario2,
+        fileName: results.scenario2?.fileName
+      });
+    }
+
+    // Scenario 3: Donation Only
+    if (results.scenario3) {
+      if (isSeparate && results.scenario3.min && results.scenario3.max) {
+        // Split into two rows
+        rows.push({
+          scenario: replaceDonationType(SCENARIOS.DONATION_ONLY, 'land'),
+          data: results.scenario3.min,
+          fileName: results.scenario3.min.fileName
+        });
+        rows.push({
+          scenario: replaceDonationType(SCENARIOS.DONATION_ONLY, 'medtech'),
+          data: results.scenario3.max,
+          fileName: results.scenario3.max.fileName
+        });
+      } else if (results.scenario3.min && results.scenario3.max) {
+        // Range format (Both Range)
+        rows.push({
+          scenario: SCENARIOS.DONATION_ONLY,
+          data: {
+            agi: {
+              min: results.scenario3.min.agi,
+              max: results.scenario3.max.agi
+            },
+            totalTaxDue: {
+              min: results.scenario3.min.totalTaxDue,
+              max: results.scenario3.max.totalTaxDue
+            },
+            totalNetGain: {
+              min: results.scenario3.min.totalNetGain,
+              max: results.scenario3.max.totalNetGain
+            },
+            fileName: results.scenario3.max.fileName
           },
           fileName: results.scenario3.max.fileName
-        } : results.scenario3  // Single value format (land or medtech only)
-      ) : null,
-      fileName: results.scenario3?.fileName || results.scenario3?.max?.fileName
-    },
-    {
-      scenario: SCENARIOS.SOLAR_DONATION_NO_REFUND,
-      data: results.scenario4 ? (
-        (results.scenario4.min && results.scenario4.max) ? {
-          // Range format (both land and medtech)
-          agi: {
-            min: results.scenario4.min.agi,
-            max: results.scenario4.max.agi
-          },
-          totalTaxDue: {
-            min: results.scenario4.min.totalTaxDue,
-            max: results.scenario4.max.totalTaxDue
-          },
-          totalNetGain: {
-            min: results.scenario4.min.totalNetGain,
-            max: results.scenario4.max.totalNetGain
+        });
+      } else {
+        // Single value (Land or Medtech only)
+        rows.push({
+          scenario: SCENARIOS.DONATION_ONLY,
+          data: results.scenario3,
+          fileName: results.scenario3.fileName
+        });
+      }
+    }
+
+    // Scenario 4: Solar + Donation (No Refund)
+    if (results.scenario4) {
+      if (isSeparate && results.scenario4.min && results.scenario4.max) {
+        // Split into two rows
+        rows.push({
+          scenario: replaceDonationType(SCENARIOS.SOLAR_DONATION_NO_REFUND, 'land'),
+          data: results.scenario4.min,
+          fileName: results.scenario4.min.fileName
+        });
+        rows.push({
+          scenario: replaceDonationType(SCENARIOS.SOLAR_DONATION_NO_REFUND, 'medtech'),
+          data: results.scenario4.max,
+          fileName: results.scenario4.max.fileName
+        });
+      } else if (results.scenario4.min && results.scenario4.max) {
+        // Range format (Both Range)
+        rows.push({
+          scenario: SCENARIOS.SOLAR_DONATION_NO_REFUND,
+          data: {
+            agi: {
+              min: results.scenario4.min.agi,
+              max: results.scenario4.max.agi
+            },
+            totalTaxDue: {
+              min: results.scenario4.min.totalTaxDue,
+              max: results.scenario4.max.totalTaxDue
+            },
+            totalNetGain: {
+              min: results.scenario4.min.totalNetGain,
+              max: results.scenario4.max.totalNetGain
+            },
+            fileName: results.scenario4.max.fileName
           },
           fileName: results.scenario4.max.fileName
-        } : results.scenario4  // Single value format (land or medtech only)
-      ) : null,
-      fileName: results.scenario4?.fileName || results.scenario4?.max?.fileName
-    },
-    {
-      scenario: SCENARIOS.SOLAR_DONATION_WITH_REFUND,
-      data: results.scenario5 ? (
-        (results.scenario5.min && results.scenario5.max) ? {
-          // Range format (both land and medtech)
-          agi: {
-            min: results.scenario5.min.agi,
-            max: results.scenario5.max.agi
-          },
-          totalTaxDue: {
-            min: results.scenario5.min.totalTaxDue,
-            max: results.scenario5.max.totalTaxDue
-          },
-          totalNetGain: {
-            min: results.scenario5.min.totalNetGain,
-            max: results.scenario5.max.totalNetGain
+        });
+      } else {
+        // Single value (Land or Medtech only)
+        rows.push({
+          scenario: SCENARIOS.SOLAR_DONATION_NO_REFUND,
+          data: results.scenario4,
+          fileName: results.scenario4.fileName
+        });
+      }
+    }
+
+    // Scenario 5: Solar + Donation (With Refund)
+    if (results.scenario5) {
+      if (isSeparate && results.scenario5.min && results.scenario5.max) {
+        // Split into two rows
+        rows.push({
+          scenario: replaceDonationType(SCENARIOS.SOLAR_DONATION_WITH_REFUND, 'land'),
+          data: results.scenario5.min,
+          fileName: results.scenario5.min.fileName
+        });
+        rows.push({
+          scenario: replaceDonationType(SCENARIOS.SOLAR_DONATION_WITH_REFUND, 'medtech'),
+          data: results.scenario5.max,
+          fileName: results.scenario5.max.fileName
+        });
+      } else if (results.scenario5.min && results.scenario5.max) {
+        // Range format (Both Range)
+        rows.push({
+          scenario: SCENARIOS.SOLAR_DONATION_WITH_REFUND,
+          data: {
+            agi: {
+              min: results.scenario5.min.agi,
+              max: results.scenario5.max.agi
+            },
+            totalTaxDue: {
+              min: results.scenario5.min.totalTaxDue,
+              max: results.scenario5.max.totalTaxDue
+            },
+            totalNetGain: {
+              min: results.scenario5.min.totalNetGain,
+              max: results.scenario5.max.totalNetGain
+            },
+            fileName: results.scenario5.max.fileName
           },
           fileName: results.scenario5.max.fileName
-        } : results.scenario5  // Single value format (land or medtech only)
-      ) : null,
-      fileName: results.scenario5?.fileName || results.scenario5?.max?.fileName
-    },
-    {
-      scenario: 'Donation + CTB',
-      data: results.scenario6 ? (
-        (results.scenario6.min && results.scenario6.max) ? {
-          // Range format (both land and medtech)
-          agi: {
-            min: 0,
-            max: 0
+        });
+      } else {
+        // Single value (Land or Medtech only)
+        rows.push({
+          scenario: SCENARIOS.SOLAR_DONATION_WITH_REFUND,
+          data: results.scenario5,
+          fileName: results.scenario5.fileName
+        });
+      }
+    }
+
+    // Scenario 6: Donation + CTB
+    if (results.scenario6) {
+      if (isSeparate && results.scenario6.min && results.scenario6.max) {
+        // Split into two rows
+        rows.push({
+          scenario: replaceDonationType('Donation + CTB', 'land'),
+          data: {
+            agi: 0,
+            totalTaxDue: results.scenario6.min.totalTaxDue,
+            totalNetGain: results.scenario6.min.totalNetGain
           },
-          totalTaxDue: {
-            min: results.scenario6.min.totalTaxDue,
-            max: results.scenario6.max.totalTaxDue
-          },
-          totalNetGain: {
-            min: results.scenario6.min.totalNetGain,
-            max: results.scenario6.max.totalNetGain
+          fileName: results.scenario6.min.fileName
+        });
+        rows.push({
+          scenario: replaceDonationType('Donation + CTB', 'medtech'),
+          data: {
+            agi: 0,
+            totalTaxDue: results.scenario6.max.totalTaxDue,
+            totalNetGain: results.scenario6.max.totalNetGain
           },
           fileName: results.scenario6.max.fileName
-        } : {
-          // Single value format (land or medtech only)
-          agi: 0,
-          totalTaxDue: results.scenario6.totalTaxDue,
-          totalNetGain: results.scenario6.totalNetGain,
+        });
+      } else if (results.scenario6.min && results.scenario6.max) {
+        // Range format (Both Range)
+        rows.push({
+          scenario: 'Donation + CTB',
+          data: {
+            agi: {
+              min: 0,
+              max: 0
+            },
+            totalTaxDue: {
+              min: results.scenario6.min.totalTaxDue,
+              max: results.scenario6.max.totalTaxDue
+            },
+            totalNetGain: {
+              min: results.scenario6.min.totalNetGain,
+              max: results.scenario6.max.totalNetGain
+            },
+            fileName: results.scenario6.max.fileName
+          },
+          fileName: results.scenario6.max.fileName
+        });
+      } else {
+        // Single value (Land or Medtech only)
+        rows.push({
+          scenario: 'Donation + CTB',
+          data: {
+            agi: 0,
+            totalTaxDue: results.scenario6.totalTaxDue,
+            totalNetGain: results.scenario6.totalNetGain
+          },
           fileName: results.scenario6.fileName
-        }
-      ) : null,
-      fileName: results.scenario6?.fileName || results.scenario6?.max?.fileName
+        });
+      }
     }
-  ];
 
-  // Filter out scenarios that weren't run (data is null)
-  const rows = allRows.filter(row => row.data !== null);
+    return rows;
+  };
+
+  const rows = buildAllRows();
+
 
   return (
     <div style={{ position: 'relative' }}>
