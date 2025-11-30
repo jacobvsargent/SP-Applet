@@ -74,6 +74,9 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
     // Add each scenario
     if (results.scenario1) {
       body += `1. DO NOTHING (Baseline)\n`;
+      if (results.scenario1.fileName) {
+        body += `   File: ${results.scenario1.fileName}\n`;
+      }
       body += `   Taxable Income: ${formatValue(calculateTaxableIncome(results.scenario1.agi))}\n`;
       body += `   Total Tax Due: ${formatValue(results.scenario1.totalTaxDue)}\n`;
       body += `   Net Gain: ${formatValue(results.scenario1.totalNetGain)}\n\n`;
@@ -81,6 +84,9 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
     
     if (results.scenario2) {
       body += `2. SOLAR ONLY\n`;
+      if (results.scenario2.fileName) {
+        body += `   File: ${results.scenario2.fileName}\n`;
+      }
       body += `   Taxable Income: ${formatValue(calculateTaxableIncome(results.scenario2.agi))}\n`;
       body += `   Total Tax Due: ${formatValue(results.scenario2.totalTaxDue)}\n`;
       body += `   Net Gain: ${formatValue(results.scenario2.totalNetGain)}\n\n`;
@@ -89,6 +95,7 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
     if (results.scenario3) {
       const s3 = results.scenario3;
       let s3Data;
+      let s3FileName;
       
       if (s3.min && s3.max) {
         // Range format
@@ -97,6 +104,12 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
           totalTaxDue: { min: s3.min.totalTaxDue, max: s3.max.totalTaxDue },
           totalNetGain: { min: s3.min.totalNetGain, max: s3.max.totalNetGain }
         };
+        // For ranges, show both file names if different
+        if (s3.min.fileName && s3.max.fileName && s3.min.fileName !== s3.max.fileName) {
+          s3FileName = `${s3.min.fileName} / ${s3.max.fileName}`;
+        } else {
+          s3FileName = s3.max.fileName || s3.min.fileName;
+        }
       } else {
         // Single value format
         s3Data = {
@@ -104,9 +117,13 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
           totalTaxDue: s3.totalTaxDue,
           totalNetGain: s3.totalNetGain
         };
+        s3FileName = s3.fileName;
       }
       
       body += `3. DONATION ONLY\n`;
+      if (s3FileName) {
+        body += `   File: ${s3FileName}\n`;
+      }
       body += `   Taxable Income: ${formatValue(calculateTaxableIncome(s3Data.agi))}\n`;
       body += `   Total Tax Due: ${formatValue(s3Data.totalTaxDue)}\n`;
       body += `   Net Gain: ${formatValue(s3Data.totalNetGain)}\n\n`;
@@ -115,6 +132,7 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
     if (results.scenario4) {
       const s4 = results.scenario4;
       let s4Data;
+      let s4FileName;
       
       if (s4.min && s4.max) {
         s4Data = {
@@ -122,15 +140,25 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
           totalTaxDue: { min: s4.min.totalTaxDue, max: s4.max.totalTaxDue },
           totalNetGain: { min: s4.min.totalNetGain, max: s4.max.totalNetGain }
         };
+        // For ranges, show both file names if different
+        if (s4.min.fileName && s4.max.fileName && s4.min.fileName !== s4.max.fileName) {
+          s4FileName = `${s4.min.fileName} / ${s4.max.fileName}`;
+        } else {
+          s4FileName = s4.max.fileName || s4.min.fileName;
+        }
       } else {
         s4Data = {
           agi: s4.agi,
           totalTaxDue: s4.totalTaxDue,
           totalNetGain: s4.totalNetGain
         };
+        s4FileName = s4.fileName;
       }
       
       body += `4. SOLAR + DONATION (No Refund)\n`;
+      if (s4FileName) {
+        body += `   File: ${s4FileName}\n`;
+      }
       body += `   Taxable Income: ${formatValue(calculateTaxableIncome(s4Data.agi))}\n`;
       body += `   Total Tax Due: ${formatValue(s4Data.totalTaxDue)}\n`;
       body += `   Net Gain: ${formatValue(s4Data.totalNetGain)}\n\n`;
@@ -139,6 +167,7 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
     if (results.scenario5) {
       const s5 = results.scenario5;
       let s5Data;
+      let s5FileName;
       
       if (s5.min && s5.max) {
         s5Data = {
@@ -146,15 +175,25 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
           totalTaxDue: { min: s5.min.totalTaxDue, max: s5.max.totalTaxDue },
           totalNetGain: { min: s5.min.totalNetGain, max: s5.max.totalNetGain }
         };
+        // For ranges, show both file names if different
+        if (s5.min.fileName && s5.max.fileName && s5.min.fileName !== s5.max.fileName) {
+          s5FileName = `${s5.min.fileName} / ${s5.max.fileName}`;
+        } else {
+          s5FileName = s5.max.fileName || s5.min.fileName;
+        }
       } else {
         s5Data = {
           agi: s5.agi,
           totalTaxDue: s5.totalTaxDue,
           totalNetGain: s5.totalNetGain
         };
+        s5FileName = s5.fileName;
       }
       
       body += `5. SOLAR + DONATION (With Refund)\n`;
+      if (s5FileName) {
+        body += `   File: ${s5FileName}\n`;
+      }
       body += `   Taxable Income: ${formatValue(calculateTaxableIncome(s5Data.agi))}\n`;
       body += `   Total Tax Due: ${formatValue(s5Data.totalTaxDue)}\n`;
       body += `   Net Gain: ${formatValue(s5Data.totalNetGain)}\n\n`;
@@ -163,6 +202,7 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
     if (results.scenario6) {
       const s6 = results.scenario6;
       let s6Data;
+      let s6FileName;
       
       if (s6.min && s6.max) {
         s6Data = {
@@ -170,15 +210,25 @@ export default function ActionButtons({ onNewAnalysis, results, userInputs }) {
           totalTaxDue: { min: s6.min.totalTaxDue, max: s6.max.totalTaxDue },
           totalNetGain: { min: s6.min.totalNetGain, max: s6.max.totalNetGain }
         };
+        // For ranges, show both file names if different
+        if (s6.min.fileName && s6.max.fileName && s6.min.fileName !== s6.max.fileName) {
+          s6FileName = `${s6.min.fileName} / ${s6.max.fileName}`;
+        } else {
+          s6FileName = s6.max.fileName || s6.min.fileName;
+        }
       } else {
         s6Data = {
           agi: 0,
           totalTaxDue: s6.totalTaxDue,
           totalNetGain: s6.totalNetGain
         };
+        s6FileName = s6.fileName;
       }
       
       body += `6. DONATION + CTB\n`;
+      if (s6FileName) {
+        body += `   File: ${s6FileName}\n`;
+      }
       body += `   Taxable Income: ${formatValue(calculateTaxableIncome(s6Data.agi))}\n`;
       body += `   Total Tax Due: ${formatValue(s6Data.totalTaxDue)}\n`;
       body += `   Net Gain: ${formatValue(s6Data.totalNetGain)}\n\n`;
