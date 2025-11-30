@@ -26,6 +26,16 @@ export const VALID_PASSCODES = {
     displayName: 'WTAI User',
   },
   
+  'TEST': {
+    userId: 'TEST',
+    displayName: 'Test User',
+  },
+  
+  'ADMI': {
+    userId: 'ADMI',
+    displayName: 'Administrator',
+  },
+  
   // Add more passcodes here as needed:
   // 'CODE': {
   //   userId: 'CODE',
