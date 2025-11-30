@@ -116,7 +116,10 @@ function doGet(e) {
         break;
       case 'createFolder':
         // Parse userInputs from JSON string
+        Logger.log('createFolder action - raw parameter: ' + e.parameter.userInputs);
         const userInputs = e.parameter.userInputs ? JSON.parse(e.parameter.userInputs) : {};
+        Logger.log('createFolder action - parsed userInputs: ' + JSON.stringify(userInputs));
+        Logger.log('createFolder action - passcode value: ' + userInputs.passcode);
         result = createAnalysisFolder(userInputs);
         break;
       case 'createWorkingCopy':
@@ -404,7 +407,8 @@ function forceRecalculation(workingCopyId) {
 
 /**
  * Create a full copy of the entire workbook (all sheets)
- * All copies go into a folder named with user inputs and timestamp
+ * All copies go into a folder structure organized by passcode
+ * Structure: Top-Level → Passcode Folder → Client Analysis Folder → Workbook Copies
  * @param {number} scenarioNumber - Scenario number (1-5)
  * @param {object} userInputs - User input data for folder naming
  * @param {string} workingCopyId - Optional working copy ID to copy from
@@ -455,10 +459,18 @@ function createWorkbookCopy(scenarioNumber, userInputs, workingCopyId) {
     
     const originalFile = DriveApp.getFileById(ss.getId());
     // Use specific folder ID instead of parent folder
-    const parentFolder = DriveApp.getFolderById('1oAKrZEv2Hrji5lfERWcsrmGmsajueMqW');
+    const topLevelFolder = DriveApp.getFolderById('1oAKrZEv2Hrji5lfERWcsrmGmsajueMqW');
     
-    Logger.log('Parent folder name: ' + parentFolder.getName());
+    Logger.log('Top-level folder name: ' + topLevelFolder.getName());
     
+    // STEP 1: Find or create passcode folder
+    let passcodeFolderName = userInputs.passcode ? userInputs.passcode.toUpperCase() : 'UNKNOWN';
+    Logger.log('Looking for passcode folder starting with: ' + passcodeFolderName);
+    
+    let passcodeFolder = findOrCreatePasscodeFolder(topLevelFolder, passcodeFolderName);
+    Logger.log('Using passcode folder: ' + passcodeFolder.getName() + ' (ID: ' + passcodeFolder.getId() + ')');
+    
+    // STEP 2: Create client analysis folder inside passcode folder
     // Create timestamp for date for folder
     const dateOnly = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
     
@@ -470,22 +482,22 @@ function createWorkbookCopy(scenarioNumber, userInputs, workingCopyId) {
       return '$' + income;
     };
     
-    // Create folder name with name first: "John Smith - $75k - NC - Single - 2025-10-30"
-    const folderName = `${userInputs.name} - ${formatIncome(userInputs.income)} - ${userInputs.state} - ${userInputs.filingStatus} - ${dateOnly}`;
+    // Create client folder name WITHOUT passcode prefix (since it's inside passcode folder)
+    const clientFolderName = `${userInputs.name} - ${formatIncome(userInputs.income)} - ${userInputs.state} - ${userInputs.filingStatus} - ${dateOnly}`;
     
-    Logger.log('Looking for/creating folder: ' + folderName);
+    Logger.log('Looking for/creating client folder: ' + clientFolderName);
     
-    // Check if folder already exists for this analysis session
-    let analysisFolder;
-    const existingFolders = parentFolder.getFoldersByName(folderName);
+    // Check if client folder already exists in passcode folder
+    let clientFolder;
+    const existingClientFolders = passcodeFolder.getFoldersByName(clientFolderName);
     
-    if (existingFolders.hasNext()) {
-      analysisFolder = existingFolders.next();
-      Logger.log('Found existing folder');
+    if (existingClientFolders.hasNext()) {
+      clientFolder = existingClientFolders.next();
+      Logger.log('Found existing client folder');
     } else {
-      // Create new folder in the same location as the original spreadsheet
-      analysisFolder = parentFolder.createFolder(folderName);
-      Logger.log('Created new folder: ' + analysisFolder.getId());
+      // Create new client folder inside passcode folder
+      clientFolder = passcodeFolder.createFolder(clientFolderName);
+      Logger.log('Created new client folder: ' + clientFolder.getId());
     }
     
     Logger.log('Creating workbook copy...');
@@ -493,7 +505,7 @@ function createWorkbookCopy(scenarioNumber, userInputs, workingCopyId) {
     // Make a copy of the entire workbook (keeping all formulas intact)
     // Initially create with a temporary name
     const tempName = 'temp_' + new Date().getTime();
-    const copiedFile = originalFile.makeCopy(tempName, analysisFolder);
+    const copiedFile = originalFile.makeCopy(tempName, clientFolder);
     
     Logger.log('Workbook copied, now naming it with nameFile(false)...');
     
@@ -517,39 +529,29 @@ function createWorkbookCopy(scenarioNumber, userInputs, workingCopyId) {
     Logger.log('Workbook copied successfully with formulas preserved');
     
     Logger.log('Success! File URL: ' + copiedFile.getUrl());
-    Logger.log('Folder URL: ' + analysisFolder.getUrl());
+    Logger.log('Client Folder URL: ' + clientFolder.getUrl());
+    Logger.log('Passcode Folder URL: ' + passcodeFolder.getUrl());
     
     // Write the folder URL to a visible cell in the original spreadsheet
-    // so users can find their saved workbooks even if CORS blocks the response
     const controlSheet = ss.getSheetByName('Blended Solution Calculator');
     if (controlSheet) {
-      // Write to a cell (e.g., A1) - adjust as needed
       try {
-        controlSheet.getRange('A1').setValue('Last Analysis Folder: ' + analysisFolder.getUrl());
-        Logger.log('Successfully wrote folder URL to A1: ' + analysisFolder.getUrl());
+        controlSheet.getRange('A1').setValue('Last Analysis Folder: ' + clientFolder.getUrl());
+        Logger.log('Successfully wrote folder URL to A1: ' + clientFolder.getUrl());
       } catch (writeError) {
         Logger.log('ERROR writing to A1: ' + writeError.toString());
-        // Try writing to a different cell as backup
-        try {
-          controlSheet.getRange('Z1').setValue('Last Analysis Folder: ' + analysisFolder.getUrl());
-          Logger.log('Successfully wrote folder URL to Z1 as backup');
-        } catch (backupError) {
-          Logger.log('ERROR writing to Z1: ' + backupError.toString());
-        }
       }
-    } else {
-      Logger.log('ERROR: Could not find sheet "Blended Solution Calculator"');
-      // Try to log all sheet names to help debug
-      const allSheets = ss.getSheets();
-      Logger.log('Available sheets: ' + allSheets.map(s => s.getName()).join(', '));
     }
     
     return {
       success: true,
       fileName: displayFileName,
-      folderName: folderName,
-      folderId: analysisFolder.getId(),
-      folderUrl: analysisFolder.getUrl(),
+      folderName: clientFolderName,
+      passcodeFolderName: passcodeFolder.getName(),
+      passcodeFolderId: passcodeFolder.getId(),
+      passcodeFolderUrl: passcodeFolder.getUrl(),
+      folderId: clientFolder.getId(),
+      folderUrl: clientFolder.getUrl(),
       fileUrl: copiedFile.getUrl()
     };
   } catch (error) {
@@ -641,17 +643,28 @@ function cleanupLimited(workingCopyId) {
 
 /**
  * Step 1: Create the analysis folder
+ * Structure: Top-Level → Passcode Folder → Client Analysis Folder
  * @param {object} userInputs - User input data for folder naming
  * @returns {object} - Folder info (id, url, name)
  */
 function createAnalysisFolder(userInputs) {
   try {
-    Logger.log('Creating analysis folder');
+    Logger.log('=== createAnalysisFolder START ===');
     Logger.log('User inputs: ' + JSON.stringify(userInputs));
+    Logger.log('Passcode from userInputs: ' + userInputs.passcode);
     
     // Use specific parent folder ID
-    const parentFolder = DriveApp.getFolderById('1oAKrZEv2Hrji5lfERWcsrmGmsajueMqW');
+    const topLevelFolder = DriveApp.getFolderById('1oAKrZEv2Hrji5lfERWcsrmGmsajueMqW');
+    Logger.log('Top-level folder: ' + topLevelFolder.getName());
     
+    // STEP 1: Find or create passcode folder
+    let passcodeFolderName = userInputs.passcode ? userInputs.passcode.toUpperCase() : 'UNKNOWN';
+    Logger.log('Passcode folder name to search: ' + passcodeFolderName);
+    
+    let passcodeFolder = findOrCreatePasscodeFolder(topLevelFolder, passcodeFolderName);
+    Logger.log('Using passcode folder: ' + passcodeFolder.getName() + ' (ID: ' + passcodeFolder.getId() + ')');
+    
+    // STEP 2: Create client analysis folder inside passcode folder
     // Create timestamp
     const dateOnly = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
     
@@ -663,28 +676,31 @@ function createAnalysisFolder(userInputs) {
       return '$' + income;
     };
     
-    // Create folder name with name first: "John Smith - $75k - NC - Single - 2025-10-30"
-    const folderName = `${userInputs.name} - ${formatIncome(userInputs.income)} - ${userInputs.state} - ${userInputs.filingStatus} - ${dateOnly}`;
+    // Create client folder name WITHOUT passcode prefix (since it's inside passcode folder)
+    const clientFolderName = `${userInputs.name} - ${formatIncome(userInputs.income)} - ${userInputs.state} - ${userInputs.filingStatus} - ${dateOnly}`;
     
-    Logger.log('Looking for/creating folder: ' + folderName);
+    Logger.log('Looking for/creating client folder: ' + clientFolderName);
     
-    // Check if folder already exists
-    let analysisFolder;
-    const existingFolders = parentFolder.getFoldersByName(folderName);
+    // Check if client folder already exists
+    let clientFolder;
+    const existingClientFolders = passcodeFolder.getFoldersByName(clientFolderName);
     
-    if (existingFolders.hasNext()) {
-      analysisFolder = existingFolders.next();
-      Logger.log('Found existing folder');
+    if (existingClientFolders.hasNext()) {
+      clientFolder = existingClientFolders.next();
+      Logger.log('Found existing client folder');
     } else {
-      analysisFolder = parentFolder.createFolder(folderName);
-      Logger.log('Created new folder: ' + analysisFolder.getId());
+      clientFolder = passcodeFolder.createFolder(clientFolderName);
+      Logger.log('Created new client folder: ' + clientFolder.getId());
     }
     
     return {
       success: true,
-      folderId: analysisFolder.getId(),
-      folderUrl: analysisFolder.getUrl(),
-      folderName: folderName
+      folderId: clientFolder.getId(),
+      folderUrl: clientFolder.getUrl(),
+      folderName: clientFolderName,
+      passcodeFolderId: passcodeFolder.getId(),
+      passcodeFolderUrl: passcodeFolder.getUrl(),
+      passcodeFolderName: passcodeFolder.getName()
     };
   } catch (error) {
     Logger.log('ERROR in createAnalysisFolder: ' + error.toString());
@@ -759,4 +775,79 @@ function deleteWorkingCopy(workingCopyId) {
  * If they don't exist, you'll need to add them or this script will fail.
  * These functions are specific to your sheet's calculation logic.
  */
+
+/**
+ * Helper function to find or create a passcode folder
+ * Searches for folders starting with the passcode (case-insensitive)
+ * Creates a new folder with just the passcode name if not found
+ * @param {Folder} parentFolder - The parent folder to search in
+ * @param {string} passcode - The passcode to search for (e.g., "MARK")
+ * @returns {Folder} - The found or created passcode folder
+ */
+function findOrCreatePasscodeFolder(parentFolder, passcode) {
+  const passcodeUpper = passcode.toUpperCase();
+  Logger.log('=== findOrCreatePasscodeFolder START ===');
+  Logger.log('Searching for folder starting with: "' + passcodeUpper + '"');
+  Logger.log('Parent folder: ' + parentFolder.getName() + ' (ID: ' + parentFolder.getId() + ')');
+  
+  // Get all folders in parent and convert to array
+  const allFoldersIterator = parentFolder.getFolders();
+  const folders = [];
+  
+  // Collect all folders first
+  while (allFoldersIterator.hasNext()) {
+    folders.push(allFoldersIterator.next());
+  }
+  
+  Logger.log('Total folders to check: ' + folders.length);
+  
+  // Search for folder starting with passcode (case-insensitive)
+  for (let i = 0; i < folders.length; i++) {
+    const folder = folders[i];
+    const folderName = folder.getName();
+    const folderNameUpper = folderName.toUpperCase();
+    
+    Logger.log('Checking folder #' + (i + 1) + ': "' + folderName + '"');
+    Logger.log('  - Uppercase: "' + folderNameUpper + '"');
+    Logger.log('  - Starts with "' + passcodeUpper + '"? ' + (folderNameUpper.indexOf(passcodeUpper) === 0));
+    
+    // Check if folder name starts with the passcode
+    if (folderNameUpper.indexOf(passcodeUpper) === 0) {
+      Logger.log('✅ MATCH FOUND! Using existing passcode folder: "' + folderName + '"');
+      Logger.log('  - Folder ID: ' + folder.getId());
+      return folder;
+    }
+  }
+  
+  Logger.log('❌ No matching folder found after checking ' + folders.length + ' folders');
+  Logger.log('Creating new passcode folder: "' + passcodeUpper + '"');
+  
+  // No folder found, create new one with just the passcode
+  const newFolder = parentFolder.createFolder(passcodeUpper);
+  Logger.log('✅ Created new passcode folder: "' + newFolder.getName() + '"');
+  Logger.log('  - Folder ID: ' + newFolder.getId());
+  Logger.log('  - Folder URL: ' + newFolder.getUrl());
+  
+  return newFolder;
+}
+
+/**
+ * TEST FUNCTION - Call this to test if passcode is being passed
+ * You can run this from the Apps Script editor
+ */
+function testPasscodeFolder() {
+  const testUserInputs = {
+    name: 'Test Client',
+    income: 75000,
+    state: 'NC',
+    filingStatus: 'Single',
+    passcode: 'MARK'
+  };
+  
+  Logger.log('=== TESTING PASSCODE FOLDER CREATION ===');
+  const result = createAnalysisFolder(testUserInputs);
+  Logger.log('Result: ' + JSON.stringify(result));
+  Logger.log('Passcode folder URL: ' + result.passcodeFolderUrl);
+  Logger.log('Client folder URL: ' + result.folderUrl);
+}
 

@@ -109,6 +109,11 @@ async function makeGetRequest(action, params = {}) {
  * @returns {Promise<object>} - Folder info {folderId, folderUrl, folderName}
  */
 export async function createAnalysisFolder(userInputs) {
+  console.log('📁 createAnalysisFolder called with:', {
+    hasPasscode: !!userInputs.passcode,
+    passcode: userInputs.passcode,
+    userInputs: userInputs
+  });
   const result = await makeRequest('createFolder', { userInputs: JSON.stringify(userInputs) });
   await wait(WAIT_TIME);
   return result;

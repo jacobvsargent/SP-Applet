@@ -4,6 +4,7 @@ A professional web application that analyzes tax optimization scenarios involvin
 
 ## ✨ Features
 
+- **Passcode Protection** - Secure access with 4-digit passcode system for user identification
 - **Smart Input Form** - Validates user input with flexible currency formatting
 - **5 Scenario Analysis** - Compares Do Nothing, Solar Only, Donation Only, and combined strategies
 - **Real-time Progress** - Visual progress bar with status updates
@@ -17,6 +18,7 @@ See [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) for detailed technical docume
 
 ## 📖 Documentation
 
+- **[PASSCODE_SYSTEM.md](PASSCODE_SYSTEM.md)** - Passcode system documentation and configuration
 - **[TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md)** - Complete technical documentation with architecture and information flow
 - **[google-apps-script/README.md](google-apps-script/README.md)** - Backend deployment instructions
 
@@ -153,12 +155,13 @@ See [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) for detailed architecture and
 
 ## 🔒 Security Notes
 
+- **Passcode Protection** - 4-digit passcode system for user identification (see [PASSCODE_SYSTEM.md](PASSCODE_SYSTEM.md))
 - Google Apps Script executes with sheet owner permissions
 - Web App is accessible to anyone with the URL (by design)
 - No sensitive data exposed in frontend code
 - HTTPS enforced on deployment platforms
 
-For production use with sensitive data, consider adding authentication.
+For production use with sensitive data, consider adding stronger authentication (see passcode documentation).
 
 ## 🐛 Troubleshooting
 

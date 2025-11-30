@@ -4,7 +4,9 @@ import ProgressBar from './components/ProgressBar';
 import ResultsTable from './components/ResultsTable';
 import ActionButtons from './components/ActionButtons';
 import ErrorDisplay from './components/ErrorDisplay';
+import PasscodeGate from './components/PasscodeGate';
 import { runAllScenarios, runSelectedScenarios } from './services/googleSheetsService';
+import { logout } from './utils/session';
 
 const APP_STATE = {
   INPUT: 'input',
@@ -24,6 +26,22 @@ export default function App() {
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const startTimeRef = React.useRef(null);
+  
+  // Passcode state
+  const [passcode, setPasscode] = useState(null);
+  const [userConfig, setUserConfig] = useState(null);
+
+  const handlePasscodeValid = (validPasscode, config) => {
+    setPasscode(validPasscode);
+    setUserConfig(config);
+    console.log('✅ Passcode accepted:', validPasscode);
+  };
+
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout? This will clear your session.')) {
+      logout();
+    }
+  };
 
   const handleProgressUpdate = (progressValue, message) => {
     setProgress(progressValue);
@@ -40,7 +58,24 @@ export default function App() {
       setElapsedTime(0);
     }
     
-    setLastSubmittedData(formData);
+    // Add passcode to formData - use state or fallback to localStorage
+    const currentPasscode = passcode || localStorage.getItem('sp_applet_passcode');
+    
+    const formDataWithPasscode = {
+      ...formData,
+      passcode: currentPasscode
+    };
+    
+    console.log('🔐 Form submission with passcode:', {
+      passcode: currentPasscode,
+      fromState: passcode,
+      fromStorage: localStorage.getItem('sp_applet_passcode'),
+      hasPasscode: !!currentPasscode,
+      willBeSent: !!formDataWithPasscode.passcode,
+      formDataWithPasscode: formDataWithPasscode
+    });
+    
+    setLastSubmittedData(formDataWithPasscode);
     setAppState(APP_STATE.PROCESSING);
     setProgress(0);
     setProgressMessage(isAutoRetry ? 'Retrying analysis...' : 'Initializing...');
@@ -50,16 +85,16 @@ export default function App() {
       let scenarioResults;
       
       // Check if we have selected scenarios (new checkbox system)
-      if (formData.selectedScenarios !== undefined) {
+      if (formDataWithPasscode.selectedScenarios !== undefined) {
         scenarioResults = await runSelectedScenarios(
-          formData, 
-          formData.selectedScenarios, 
+          formDataWithPasscode, 
+          formDataWithPasscode.selectedScenarios, 
           handleProgressUpdate
         );
       } else {
         // Fallback to old system (shouldn't happen with new UI, but keeps compatibility)
         const { runAllScenarios } = await import('./services/googleSheetsService');
-        scenarioResults = await runAllScenarios(formData, handleProgressUpdate);
+        scenarioResults = await runAllScenarios(formDataWithPasscode, handleProgressUpdate);
       }
       
       // Calculate final elapsed time using ref to ensure we have the correct start time
@@ -120,40 +155,65 @@ export default function App() {
   };
 
   return (
-    <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-        <div>
-          <h1>Strategic Partner Estimator Tool</h1>
-          <p className="subtitle">
-            This product is in beta. Please refer to a member of the Taxwise team with any questions or concerns.
-          </p>
+    <PasscodeGate onPasscodeValid={handlePasscodeValid}>
+      <div className="container">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+          <div>
+            <h1>Strategic Partner Estimator Tool</h1>
+            <p className="subtitle">
+              This product is in beta. Please refer to a member of the Taxwise team with any questions or concerns.
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            {passcode && (
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#f44336',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  transition: 'background-color 0.3s'
+                }}
+                onMouseEnter={(e) => { e.target.style.backgroundColor = '#d32f2f'; }}
+                onMouseLeave={(e) => { e.target.style.backgroundColor = '#f44336'; }}
+                title={`Logout (User: ${passcode})`}
+              >
+                Logout
+              </button>
+            )}
+            <img 
+              src="/SP-Applet/TWP_Logo_Final.png" 
+              alt="Taxwise Partners Logo" 
+              style={{ height: '80px' }}
+            />
+          </div>
         </div>
-        <img 
-          src="/SP-Applet/TWP_Logo_Final.png" 
-          alt="Taxwise Partners Logo" 
-          style={{ height: '80px', marginLeft: '20px' }}
-        />
+
+        {appState === APP_STATE.INPUT && (
+          <InputForm onSubmit={handleFormSubmit} />
+        )}
+
+        {appState === APP_STATE.PROCESSING && (
+          <ProgressBar progress={progress} message={progressMessage} startTime={startTime} />
+        )}
+
+        {appState === APP_STATE.ERROR && (
+          <ErrorDisplay error={error} onRetry={handleRetry} />
+        )}
+
+        {appState === APP_STATE.RESULTS && results && (
+          <>
+            <ResultsTable results={results} userInputs={lastSubmittedData} elapsedTime={elapsedTime} />
+            <ActionButtons onNewAnalysis={handleNewAnalysis} results={results} userInputs={lastSubmittedData} />
+          </>
+        )}
       </div>
-
-      {appState === APP_STATE.INPUT && (
-        <InputForm onSubmit={handleFormSubmit} />
-      )}
-
-      {appState === APP_STATE.PROCESSING && (
-        <ProgressBar progress={progress} message={progressMessage} startTime={startTime} />
-      )}
-
-      {appState === APP_STATE.ERROR && (
-        <ErrorDisplay error={error} onRetry={handleRetry} />
-      )}
-
-      {appState === APP_STATE.RESULTS && results && (
-        <>
-          <ResultsTable results={results} userInputs={lastSubmittedData} elapsedTime={elapsedTime} />
-          <ActionButtons onNewAnalysis={handleNewAnalysis} results={results} userInputs={lastSubmittedData} />
-        </>
-      )}
-    </div>
+    </PasscodeGate>
   );
 }
 
