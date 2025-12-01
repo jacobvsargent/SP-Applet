@@ -30,6 +30,7 @@ jobs:
       - name: Build with environment variables
         env:
           VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
+          VITE_GOOGLE_APPS_SCRIPT_URL: ${{ secrets.VITE_GOOGLE_APPS_SCRIPT_URL }}
         run: npm run build
       
       - name: Setup Pages
