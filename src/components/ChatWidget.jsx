@@ -26,7 +26,6 @@ export default function ChatWidget({ onFormDataUpdate, onComplete, initialFormDa
   
   const messagesEndRef = useRef(null);
   const openai = useRef(null);
-  const [currentStep, setCurrentStep] = useState('name'); // Track what we're asking for
 
   // Initialize OpenAI client
   useEffect(() => {
@@ -53,37 +52,26 @@ export default function ChatWidget({ onFormDataUpdate, onComplete, initialFormDa
     return hasName && hasIncome && hasState && hasFilingStatus && hasAvgOrKnown;
   };
 
-  // Determine next step based on what's missing
-  const getNextStep = (data = formData) => {
-    if (!data.name) return 'name';
-    if (!data.income) return 'income';
-    if (!data.state) return 'state';
-    if (!data.filingStatus) return 'filingStatus';
-    if (!data.avgIncome && !data.knownFederalTax) return 'tax2022';
-    if (!data.capitalGains) return 'capitalGains';
-    return 'complete';
+  // Determine what fields are still missing
+  const getMissingFields = (data) => {
+    const missing = [];
+    if (!data.name) missing.push('name');
+    if (!data.income) missing.push('2025 income');
+    if (!data.state) missing.push('state');
+    if (!data.filingStatus) missing.push('filing status');
+    if (!data.avgIncome && !data.knownFederalTax) missing.push('2022 tax information');
+    return missing;
   };
 
-  // Get the question for the next step
-  const getQuestionForStep = (step) => {
-    switch (step) {
-      case 'name':
-        return "Hi! I'm here to help you analyze tax optimization scenarios. Let's start with your name - what should I call you?";
-      case 'income':
-        return "What's your 2025 ordinary income?";
-      case 'state':
-        return "What state do you file taxes in?";
-      case 'filingStatus':
-        return "Are you filing as Single or Married Filing Jointly?";
-      case 'tax2022':
-        return "Do you know your 2022 income or the federal tax you paid in 2022? Either one works.";
-      case 'capitalGains':
-        return "Do you have any long-term capital gains for 2025? (You can say 'no' or 'none' if not)";
-      case 'complete':
-        return "Perfect! I have everything I need. Ready to run your analysis?";
-      default:
-        return "Let me know when you're ready to continue.";
-    }
+  // Get the question for the next missing field
+  const getNextQuestion = (data) => {
+    if (!data.name) return "What's your name?";
+    if (!data.income) return "What's your 2025 ordinary income?";
+    if (!data.state) return "What state do you file taxes in?";
+    if (!data.filingStatus) return "Are you filing as Single or Married Filing Jointly?";
+    if (!data.avgIncome && !data.knownFederalTax) return "Do you know your 2022 income or the federal tax you paid in 2022?";
+    if (!data.capitalGains) return "Do you have any long-term capital gains for 2025? (You can say 'no' or 'none' if not)";
+    return "Perfect! I have everything I need. Ready to run your analysis?";
   };
 
   const handleSend = async () => {
@@ -96,22 +84,151 @@ export default function ChatWidget({ onFormDataUpdate, onComplete, initialFormDa
     setIsLoading(true);
 
     try {
-      // Use GPT to extract data from user's response based on current step
-      const extractionPrompt = `Extract information from the user's response for the "${currentStep}" field.
+      // Phase 1: Classify user intent
+      const classificationPrompt = `Analyze the user's message and classify their intent.
 
-Current step: ${currentStep}
+User message: "${userInput}"
+
+Context: We're collecting tax information. We need: name, 2025 income, state, filing status, and 2022 tax info.
+
+Classify as ONE of these intents:
+1. "providing_data" - User is giving tax/personal information (name, numbers, location, status, etc.)
+2. "asking_question" - User is asking a question about taxes, programs, legality, how things work, etc.
+3. "confirming" - User is saying yes/ready/go ahead/let's do it
+4. "casual" - Small talk, greetings, off-topic comments
+
+Return ONLY a JSON object: {"intent": "providing_data"} or {"intent": "asking_question"} etc.`;
+
+      const classificationResponse = await openai.current.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: classificationPrompt },
+          { role: 'user', content: userInput }
+        ],
+        temperature: 0
+      });
+
+      const classificationText = classificationResponse.choices[0].message.content.trim();
+      console.log('🎯 Intent classification:', classificationText);
+      
+      let classification;
+      try {
+        classification = JSON.parse(classificationText);
+      } catch (e) {
+        console.error('Failed to parse classification:', classificationText);
+        classification = { intent: 'providing_data' }; // Default fallback
+      }
+
+      // Phase 2: Handle based on intent
+      if (classification.intent === 'confirming' && isFormComplete()) {
+        // User is ready to run analysis
+        console.log('🚀 Chat Analysis Triggered!');
+        console.log('📊 Form Data being sent:', formData);
+        onComplete(formData);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: "Perfect! Running your analysis now... 🚀"
+        }]);
+        setIsLoading(false);
+        return;
+      }
+
+      if (classification.intent === 'asking_question') {
+        // User asked a question - answer it conversationally and redirect
+        const questionAnswerPrompt = `The user asked a question while we're collecting tax information. Answer their question helpfully and professionally, then gently redirect them back to providing the information we need.
+
+User's question: "${userInput}"
+
+Missing information we still need: ${getMissingFields(formData).join(', ')}
+
+Guidelines:
+- Answer their question concisely and accurately
+- For legal/specific program questions, suggest contacting Taxwise Partners directly
+- After answering, smoothly transition back to collecting data
+- End with the next question we need answered: "${getNextQuestion(formData)}"
+- Keep response under 3 sentences
+- Be friendly and helpful
+
+Example format:
+"[Answer to their question]. [Transition]. [Next question]?"`;
+
+        const answerResponse = await openai.current.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: questionAnswerPrompt },
+            { role: 'user', content: userInput }
+          ],
+          temperature: 0.7
+        });
+
+        const answer = answerResponse.choices[0].message.content.trim();
+        console.log('💬 Conversational response:', answer);
+
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: answer
+        }]);
+        setIsLoading(false);
+        return;
+      }
+
+      if (classification.intent === 'casual') {
+        // Small talk - respond briefly and redirect
+        const casualPrompt = `The user made a casual comment. Respond briefly and friendly, then redirect to data collection.
+
 User said: "${userInput}"
 
-Extract and return ONLY a JSON object with the extracted value. Examples:
+Next info we need: "${getNextQuestion(formData)}"
 
-For name: {"name": "John Smith"}
-For income: {"income": 750000} (extract number only)
-For state: {"state": "California"} (full state name)
-For filingStatus: {"filingStatus": "Single"} or {"filingStatus": "MarriedJointly"}
-For tax2022: {"avgIncome": 1000000} or {"knownFederalTax": 280000} (whichever they provided)
-For capitalGains: {"capitalGains": 50000} or {"capitalGains": 0} (if they said no/none)
+Keep it very brief (1-2 sentences). Be friendly but professional. Redirect to the question.`;
 
-If asking to confirm/run analysis: {"confirmed": true}
+        const casualResponse = await openai.current.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: casualPrompt },
+            { role: 'user', content: userInput }
+          ],
+          temperature: 0.7
+        });
+
+        const response = casualResponse.choices[0].message.content.trim();
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: response
+        }]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Intent is 'providing_data' - extract ALL available information
+      const extractionPrompt = `Extract ALL tax-related information from the user's message. Look for ANY of these fields:
+
+User said: "${userInput}"
+
+Extract any/all of these that are present:
+- name: Full name (string)
+- income: 2025 ordinary income (number only, no formatting)
+- capitalGains: 2025 long-term capital gains (number, or 0 if they say no/none)
+- avgIncome: 2022 income estimate (number)
+- knownFederalTax: 2022 federal tax paid (number)
+- state: State where they file taxes (full state name)
+- filingStatus: "Single" or "MarriedJointly"
+
+Return a JSON object with ONLY the fields you found. Examples:
+
+User: "my name is jacob and i make 100k per year"
+Return: {"name": "Jacob", "income": 100000}
+
+User: "I'm from California and I'm single"
+Return: {"state": "California", "filingStatus": "Single"}
+
+User: "750k income, paid 200k in taxes in 2022"
+Return: {"income": 750000, "knownFederalTax": 200000}
+
+User: "no capital gains"
+Return: {"capitalGains": 0}
+
+If you can't extract any relevant data, return: {}
 
 Return ONLY the JSON object, nothing else.`;
 
@@ -141,44 +258,50 @@ Return ONLY the JSON object, nothing else.`;
       onFormDataUpdate(updatedFormData);
 
       console.log('📋 Updated form data:', updatedFormData);
+      console.log('📝 Extracted fields:', Object.keys(parsedData));
 
-      // Check if user confirmed to run analysis
-      if (parsedData.confirmed && isFormComplete()) {
-        console.log('🚀 Chat Analysis Triggered!');
-        console.log('📊 Form Data being sent:', updatedFormData);
-        onComplete(updatedFormData);
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: "Perfect! Running your analysis now... 🚀"
-        }]);
-        setIsLoading(false);
-        return;
-      }
-
-      // Determine next step using the UPDATED form data
-      const nextStep = getNextStep(updatedFormData);
-      setCurrentStep(nextStep);
-      
-      console.log('➡️ Current step was:', currentStep, '| Next step is:', nextStep);
-
-      // Generate acknowledgment and next question
+      // Generate appropriate response
       let response;
-      if (nextStep === 'complete') {
-        response = getQuestionForStep('complete');
+      
+      if (Object.keys(parsedData).length === 0) {
+        // Couldn't extract anything - ask them to clarify
+        response = `I'm not sure I understood that. ${getNextQuestion(updatedFormData)}`;
+      } else if (isFormComplete()) {
+        // All data collected!
+        response = "Perfect! I have everything I need. Ready to run your analysis?";
       } else {
-        // Simple acknowledgment + next question
-        const acknowledgments = {
-          name: `Nice to meet you, ${updatedFormData.name}!`,
-          income: `Got it, $${updatedFormData.income?.toLocaleString()}.`,
-          state: `Perfect, ${updatedFormData.state}.`,
-          filingStatus: `Understood.`,
-          tax2022: `Great.`,
-          capitalGains: `Okay.`
-        };
+        // Acknowledge what we got and ask for next piece
+        const acknowledgments = [];
         
-        const ack = acknowledgments[currentStep] || 'Got it.';
-        const nextQuestion = getQuestionForStep(nextStep);
-        response = `${ack} ${nextQuestion}`;
+        if (parsedData.name) {
+          acknowledgments.push(`Nice to meet you, ${updatedFormData.name}!`);
+        }
+        if (parsedData.income) {
+          acknowledgments.push(`I see you make $${updatedFormData.income.toLocaleString()}.`);
+        }
+        if (parsedData.capitalGains && parsedData.capitalGains > 0) {
+          acknowledgments.push(`And $${updatedFormData.capitalGains.toLocaleString()} in capital gains.`);
+        }
+        if (parsedData.capitalGains === 0) {
+          acknowledgments.push(`No capital gains, got it.`);
+        }
+        if (parsedData.state) {
+          acknowledgments.push(`${updatedFormData.state}.`);
+        }
+        if (parsedData.filingStatus) {
+          const status = updatedFormData.filingStatus === 'MarriedJointly' ? 'Married Filing Jointly' : 'Single';
+          acknowledgments.push(`Filing as ${status}.`);
+        }
+        if (parsedData.avgIncome) {
+          acknowledgments.push(`2022 income of $${updatedFormData.avgIncome.toLocaleString()}.`);
+        }
+        if (parsedData.knownFederalTax) {
+          acknowledgments.push(`$${updatedFormData.knownFederalTax.toLocaleString()} in 2022 federal taxes.`);
+        }
+
+        const ackText = acknowledgments.length > 0 ? acknowledgments.join(' ') : 'Got it.';
+        const nextQuestion = getNextQuestion(updatedFormData);
+        response = `${ackText} ${nextQuestion}`;
       }
 
       setMessages(prev => [...prev, {
@@ -336,10 +459,13 @@ Return ONLY the JSON object, nothing else.`;
           borderTop: '1px solid #ddd'
         }}>
           <details>
-            <summary>Debug: Collected Data (Step: {currentStep})</summary>
+            <summary>Debug: Collected Data</summary>
             <pre style={{ fontSize: '10px', overflow: 'auto' }}>
               {JSON.stringify(formData, null, 2)}
             </pre>
+            <div style={{ marginTop: '8px', fontSize: '11px' }}>
+              Missing: {getMissingFields(formData).join(', ') || 'Nothing - ready to go!'}
+            </div>
           </details>
         </div>
       )}
