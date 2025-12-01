@@ -21,7 +21,8 @@ export default function ChatWidget({ onFormDataUpdate, onComplete, initialFormDa
     state: '',
     filingStatus: '',
     donationPreference: 'both',
-    selectedScenarios: [2, 3, 4, 5, 6]
+    selectedScenarios: [],
+    strategyInterest: ''  // Track which strategies user is interested in
   });
   
   const messagesEndRef = useRef(null);
@@ -48,8 +49,9 @@ export default function ChatWidget({ onFormDataUpdate, onComplete, initialFormDa
     const hasFilingStatus = formData.filingStatus && formData.filingStatus.trim() !== '';
     const hasAvgOrKnown = (formData.avgIncome && formData.avgIncome > 0) || 
                           (formData.knownFederalTax && formData.knownFederalTax > 0);
+    const hasStrategies = formData.selectedScenarios && formData.selectedScenarios.length > 0;
     
-    return hasName && hasIncome && hasState && hasFilingStatus && hasAvgOrKnown;
+    return hasName && hasIncome && hasState && hasFilingStatus && hasAvgOrKnown && hasStrategies;
   };
 
   // Determine what fields are still missing
@@ -60,6 +62,7 @@ export default function ChatWidget({ onFormDataUpdate, onComplete, initialFormDa
     if (!data.state) missing.push('state');
     if (!data.filingStatus) missing.push('filing status');
     if (!data.avgIncome && !data.knownFederalTax) missing.push('2022 tax information');
+    if (!data.selectedScenarios || data.selectedScenarios.length === 0) missing.push('strategy preferences');
     return missing;
   };
 
@@ -71,7 +74,10 @@ export default function ChatWidget({ onFormDataUpdate, onComplete, initialFormDa
     if (!data.filingStatus) return "Are you filing as Single or Married Filing Jointly?";
     if (!data.avgIncome && !data.knownFederalTax) return "Do you know your 2022 income or the federal tax you paid in 2022?";
     if (!data.capitalGains) return "Do you have any long-term capital gains for 2025? (You can say 'no' or 'none' if not)";
-    return "Perfect! I have everything I need. Ready to run your analysis?";
+    if (!data.selectedScenarios || data.selectedScenarios.length === 0) {
+      return "Are you interested in donation strategies, solar business strategies, or convertible tax bond strategies? You can say as many or as few as you'd like.";
+    }
+    return "Perfect! I have all the information I need. The analysis may take up to 10 minutes to complete - please keep your browser open while it runs. Ready to start?";
   };
 
   const handleSend = async () => {
@@ -210,6 +216,11 @@ IMPORTANT: Ordinary income and long-term capital gains are MUTUALLY EXCLUSIVE an
 - Capital gains = profit from selling investments held > 1 year
 - Total income = ordinary income + capital gains
 
+STRATEGY INFORMATION (for extracting strategy preferences):
+- Donation strategies: Include the donation of land and medical technology assets for their fair market value, even though you can purchase them at much lower prices. Scenarios: 3, 4, 5, 6
+- Solar strategies: Entail the user starting their own solar business, which delivers strong tax benefits in the form of depreciation and investment tax credit, and can even produce refunds of prior years' taxes paid in certain cases. Scenarios: 2, 4, 5
+- Convertible tax bonds (CTB): A financial instrument to reduce tax burden. Scenario: 6
+
 Extract any/all of these that are present:
 - name: Full name (string)
 - income: 2025 ordinary income ONLY - does NOT include capital gains (number only, no formatting)
@@ -218,6 +229,12 @@ Extract any/all of these that are present:
 - knownFederalTax: 2022 federal tax paid (number)
 - state: State where they file taxes (full state name)
 - filingStatus: "Single" or "MarriedJointly"
+- strategyInterest: Array of interested strategies. Map user's interests to scenario numbers:
+  * If they mention "donation" or "charitable" → include scenarios [3, 4, 5, 6]
+  * If they mention "solar" → include scenarios [2, 4, 5]
+  * If they mention "bonds" or "CTB" or "convertible" → include scenario [6]
+  * Combine all mentioned strategies (remove duplicates)
+  * Return as "selectedScenarios": [array of scenario numbers]
 
 Return a JSON object with ONLY the fields you found. Examples:
 
@@ -238,6 +255,18 @@ Return: {"income": 750000, "knownFederalTax": 200000}
 
 User: "no capital gains"
 Return: {"capitalGains": 0}
+
+User: "I'm interested in donation and solar strategies"
+Return: {"selectedScenarios": [2, 3, 4, 5, 6]}
+
+User: "just solar"
+Return: {"selectedScenarios": [2, 4, 5]}
+
+User: "all of them" or "everything"
+Return: {"selectedScenarios": [2, 3, 4, 5, 6]}
+
+User: "donation and bonds"
+Return: {"selectedScenarios": [3, 4, 5, 6]}
 
 If you can't extract any relevant data, return: {}
 
@@ -308,6 +337,19 @@ Return ONLY the JSON object, nothing else.`;
         }
         if (parsedData.knownFederalTax) {
           acknowledgments.push(`$${updatedFormData.knownFederalTax.toLocaleString()} in 2022 federal taxes`);
+        }
+        if (parsedData.selectedScenarios && parsedData.selectedScenarios.length > 0) {
+          const strategies = [];
+          if (parsedData.selectedScenarios.includes(2) || parsedData.selectedScenarios.includes(4) || parsedData.selectedScenarios.includes(5)) {
+            strategies.push('solar');
+          }
+          if (parsedData.selectedScenarios.includes(3) || parsedData.selectedScenarios.includes(4) || parsedData.selectedScenarios.includes(5)) {
+            strategies.push('donation');
+          }
+          if (parsedData.selectedScenarios.includes(6)) {
+            strategies.push('convertible tax bonds');
+          }
+          acknowledgments.push(`Analyzing ${strategies.join(' and ')} strategies`);
         }
 
         const ackText = acknowledgments.length > 0 ? acknowledgments.join(', ') + '.' : 'Got it.';
