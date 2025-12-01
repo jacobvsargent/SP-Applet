@@ -119,7 +119,7 @@ export default function PasscodeGate({ children, onPasscodeValid }) {
                 type="text"
                 value={passcode}
                 onChange={handlePasscodeChange}
-                placeholder="Enter passcode"
+                placeholder="passcode"
                 autoFocus
                 style={{
                   width: '100%',
