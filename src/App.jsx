@@ -157,45 +157,48 @@ export default function App() {
   return (
     <PasscodeGate onPasscodeValid={handlePasscodeValid}>
       <div className="container">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-          <div>
-            <h1>Strategic Partner Estimator Tool</h1>
-            <p className="subtitle">
-              This product is in beta. Please refer to a member of the Taxwise team with any questions or concerns.
-            </p>
+        {/* Only show header and logo for non-CHAT users */}
+        {!userConfig?.frontEndConfig?.useChat && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+            <div>
+              <h1>Strategic Partner Estimator Tool</h1>
+              <p className="subtitle">
+                This product is in beta. Please refer to a member of the Taxwise team with any questions or concerns.
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              {passcode && (
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#f44336',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    transition: 'background-color 0.3s'
+                  }}
+                  onMouseEnter={(e) => { e.target.style.backgroundColor = '#d32f2f'; }}
+                  onMouseLeave={(e) => { e.target.style.backgroundColor = '#f44336'; }}
+                  title={`Logout (User: ${passcode})`}
+                >
+                  Logout
+                </button>
+              )}
+              <img 
+                src="/SP-Applet/TWP_Logo_Final.png" 
+                alt="Taxwise Partners Logo" 
+                style={{ height: '80px' }}
+              />
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            {passcode && (
-              <button
-                onClick={handleLogout}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#f44336',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  transition: 'background-color 0.3s'
-                }}
-                onMouseEnter={(e) => { e.target.style.backgroundColor = '#d32f2f'; }}
-                onMouseLeave={(e) => { e.target.style.backgroundColor = '#f44336'; }}
-                title={`Logout (User: ${passcode})`}
-              >
-                Logout
-              </button>
-            )}
-            <img 
-              src="/SP-Applet/TWP_Logo_Final.png" 
-              alt="Taxwise Partners Logo" 
-              style={{ height: '80px' }}
-            />
-          </div>
-        </div>
+        )}
 
         {appState === APP_STATE.INPUT && (
-          <InputForm onSubmit={handleFormSubmit} />
+          <InputForm onSubmit={handleFormSubmit} userConfig={userConfig} onLogout={handleLogout} />
         )}
 
         {appState === APP_STATE.PROCESSING && (

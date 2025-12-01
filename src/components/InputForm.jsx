@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { US_STATES, FILING_STATUS, FILING_STATUS_LABELS } from '../constants';
 import { isValidCurrency, parseCurrency, formatCurrencyInput } from '../utils/formatting';
+import ChatWidget from './ChatWidget';
 
-export default function InputForm({ onSubmit }) {
+export default function InputForm({ onSubmit, userConfig, onLogout }) {
   const [formData, setFormData] = useState({
     name: '',
     income: '',
@@ -24,6 +25,52 @@ export default function InputForm({ onSubmit }) {
 
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+
+  // Check if user should see chat interface
+  const useChatInterface = userConfig?.frontEndConfig?.useChat === true;
+
+  // Handler for chat widget data updates
+  const handleChatDataUpdate = (chatFormData) => {
+    setFormData(chatFormData);
+  };
+
+  // Handler for chat widget completion
+  const handleChatComplete = (chatFormData) => {
+    console.log('📥 InputForm received chat data:', chatFormData);
+    
+    // Format and submit the data
+    const submissionData = {
+      name: chatFormData.name.trim(),
+      income: chatFormData.income,
+      capitalGains: chatFormData.capitalGains || null,
+      avgIncome: chatFormData.avgIncome || null,
+      knownFederalTax: chatFormData.knownFederalTax || null,
+      state: chatFormData.state,
+      filingStatus: chatFormData.filingStatus,
+      donationPreference: chatFormData.donationPreference,
+      // For chat users, default to empty array (will run baseline only) or all scenarios
+      selectedScenarios: chatFormData.selectedScenarios || []
+    };
+    
+    console.log('📤 InputForm submitting data:', submissionData);
+    onSubmit(submissionData);
+  };
+
+  // If chat mode, show chat widget instead of form
+  if (useChatInterface) {
+    return (
+      <div>
+        <ChatWidget
+          onFormDataUpdate={handleChatDataUpdate}
+          onComplete={handleChatComplete}
+          initialFormData={formData}
+          onLogout={onLogout}
+        />
+      </div>
+    );
+  }
+
+  // Rest of existing form code below...
 
   const validateField = (name, value) => {
     switch (name) {

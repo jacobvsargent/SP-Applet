@@ -36,6 +36,14 @@ export const VALID_PASSCODES = {
     displayName: 'Administrator',
   },
   
+  'CHAT': {
+    userId: 'CHAT',
+    displayName: 'Chat User',
+    frontEndConfig: {
+      useChat: true  // Flag to show chat interface
+    }
+  },
+  
   // Add more passcodes here as needed:
   // 'CODE': {
   //   userId: 'CODE',
