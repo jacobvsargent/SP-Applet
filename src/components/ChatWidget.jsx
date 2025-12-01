@@ -205,10 +205,15 @@ Keep it very brief (1-2 sentences). Be friendly but professional. Redirect to th
 
 User said: "${userInput}"
 
+IMPORTANT: Ordinary income and long-term capital gains are MUTUALLY EXCLUSIVE and sum to total income.
+- Ordinary income = all income that is NOT capital gains (wages, business income, rental income, etc.)
+- Capital gains = profit from selling investments held > 1 year
+- Total income = ordinary income + capital gains
+
 Extract any/all of these that are present:
 - name: Full name (string)
-- income: 2025 ordinary income (number only, no formatting)
-- capitalGains: 2025 long-term capital gains (number, or 0 if they say no/none)
+- income: 2025 ordinary income ONLY - does NOT include capital gains (number only, no formatting)
+- capitalGains: 2025 long-term capital gains ONLY (number, or 0 if they say no/none)
 - avgIncome: 2022 income estimate (number)
 - knownFederalTax: 2022 federal tax paid (number)
 - state: State where they file taxes (full state name)
@@ -218,6 +223,12 @@ Return a JSON object with ONLY the fields you found. Examples:
 
 User: "my name is jacob and i make 100k per year"
 Return: {"name": "Jacob", "income": 100000}
+
+User: "I make 500k with 200k in capital gains"
+Return: {"income": 500000, "capitalGains": 200000}
+
+User: "total income is 750k, 250k from investments"
+Return: {"income": 500000, "capitalGains": 250000}
 
 User: "I'm from California and I'm single"
 Return: {"state": "California", "filingStatus": "Single"}
@@ -277,29 +288,29 @@ Return ONLY the JSON object, nothing else.`;
           acknowledgments.push(`Nice to meet you, ${updatedFormData.name}!`);
         }
         if (parsedData.income) {
-          acknowledgments.push(`I see you make $${updatedFormData.income.toLocaleString()}.`);
+          acknowledgments.push(`Got it, $${updatedFormData.income.toLocaleString()} in ordinary income`);
         }
         if (parsedData.capitalGains && parsedData.capitalGains > 0) {
-          acknowledgments.push(`And $${updatedFormData.capitalGains.toLocaleString()} in capital gains.`);
+          acknowledgments.push(`and $${updatedFormData.capitalGains.toLocaleString()} in capital gains`);
         }
         if (parsedData.capitalGains === 0) {
-          acknowledgments.push(`No capital gains, got it.`);
+          acknowledgments.push(`No capital gains, understood`);
         }
         if (parsedData.state) {
-          acknowledgments.push(`${updatedFormData.state}.`);
+          acknowledgments.push(`OK, you file in ${updatedFormData.state}`);
         }
         if (parsedData.filingStatus) {
           const status = updatedFormData.filingStatus === 'MarriedJointly' ? 'Married Filing Jointly' : 'Single';
-          acknowledgments.push(`Filing as ${status}.`);
+          acknowledgments.push(`Filing as ${status}`);
         }
         if (parsedData.avgIncome) {
-          acknowledgments.push(`2022 income of $${updatedFormData.avgIncome.toLocaleString()}.`);
+          acknowledgments.push(`2022 income of $${updatedFormData.avgIncome.toLocaleString()}`);
         }
         if (parsedData.knownFederalTax) {
-          acknowledgments.push(`$${updatedFormData.knownFederalTax.toLocaleString()} in 2022 federal taxes.`);
+          acknowledgments.push(`$${updatedFormData.knownFederalTax.toLocaleString()} in 2022 federal taxes`);
         }
 
-        const ackText = acknowledgments.length > 0 ? acknowledgments.join(' ') : 'Got it.';
+        const ackText = acknowledgments.length > 0 ? acknowledgments.join(', ') + '.' : 'Got it.';
         const nextQuestion = getNextQuestion(updatedFormData);
         response = `${ackText} ${nextQuestion}`;
       }
